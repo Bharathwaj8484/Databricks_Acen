@@ -1,0 +1,37 @@
+-- Databricks notebook source
+USE CATALOG hive_metastore;
+
+-- COMMAND ----------
+
+MERGE INTO confz.Training AS T
+USING work.Training AS S
+  ON T.Training_ID = S.Training_ID
+     AND T.curr_ind = 'Y'
+     AND T.checksum <> S.checksum  
+WHEN MATCHED THEN
+  UPDATE SET
+    T.curr_ind = 'N',
+    T.end_date = CURRENT_DATE();
+
+INSERT INTO confz.Training
+SELECT
+  Training_Key, 
+  S.checksum,
+  'Y' AS curr_ind,
+  CURRENT_DATE() AS start_date,
+  DATE('9999-12-31') AS end_date,
+  S.Training_ID,
+  S.Training_name,
+  S.Start_Date,
+  S.End_Date,
+  S.Duration_Hrs,
+  S.Training_Mode,
+  S.ingestTimestamp,
+  S.loadKey
+FROM work.Training S
+LEFT ANTI JOIN confz.Training T
+  ON S.checksum = T.checksum;  
+
+-- COMMAND ----------
+
+select * from confz.training;
