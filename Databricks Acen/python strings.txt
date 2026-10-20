@@ -1,0 +1,128 @@
+#1. new string:
+s1 = input("s1: ")
+s2 = input("s2: ")
+mid = len(s1) // 2
+print(s1[:mid] + s2 + s1[mid:])
+
+#2. count chars:
+s = input("str: ")
+lc = sum(1 for ch in s if ch.islower())
+uc = sum(1 for ch in s if ch.isupper())
+dig = sum(1 for ch in s if ch.isdigit())
+sym = len(s) - lc - uc - dig
+print("Chars =", lc + uc)
+print("Digits =", dig)
+print("Symbol =", sym)
+
+#3. sum & avg:
+import re
+s = input("str: ")
+nums = re.findall(r'\d+', s)
+nums = [int(x) for x in nums]
+if nums:
+    print("sum is", sum(nums))
+    print("average is", sum(nums)/len(nums))
+else:
+    print("sum is 0")
+    print("average is 0")
+
+#4. reverse words:
+s = input("str: ")
+words = s.split()
+print(" ".join(words[::-1]))
+
+#5. max word:
+s = input("str: ")
+words = s.split()
+words = [w.strip(".,") for w in words]
+max_word = max(set(words), key=words.count)
+print(max_word, "occurring", words.count(max_word), "times")
+
+#6. replace in list:
+lst = [10, 20, 30, 20, 40]
+if 20 in lst:
+    i = lst.index(20)
+    lst[i] = 200
+print(lst)
+
+#7. sort tuple:
+t = (('a', 23), ('b', 37), ('c', 11), ('d', 29))
+sorted_t = tuple(sorted(t, key=lambda x: x[1]))
+print(sorted_t)
+
+#8. set ops:
+s1 = {10, 20, 30, 40, 50}
+s2 = {60, 70, 80, 90, 10}
+print("intersection:", s1.intersection(s2))
+print("union:", s1.union(s2))
+print("difference:", s1.difference(s2))
+print("symmetric_difference:", s1.symmetric_difference(s2))
+print("isdisjoint:", s1.isdisjoint(s2))
+
+#9. dict ops:
+d = {}
+d["a"] = 1
+d["b"] = 2
+d["c"] = 3
+d["d"] = 4
+d["e"] = 5
+k = input("remove key: ")
+if k in d:
+    del d[k]
+k = input("get key: ")
+print(d.get(k, "not found"))
+print(d)
+
+#10. list comp:
+nums = list(range(1, 21))
+squares = [x*x for x in nums]
+print(squares)
+
+#11. remove duplicates:
+lst = [1, 2, 3, 2, 4, 1, 5]
+unique = []
+for x in lst:
+    if x not in unique:
+        unique.append(x)
+print(unique)
+
+#12. merge & sort:
+l1 = [3, 1, 4]
+l2 = [2, 5, 0]
+merged = l1 + l2
+merged.sort()
+print(merged)
+
+#13. sort tuples:
+t = [(3, 'Banana'), (1, 'Apple'), (2, 'Cherry')]
+t.sort(key=lambda x: x[0], reverse=True)
+print(t)
+
+#14. phone book:
+phone = {}
+while True:
+    cmd = input("cmd (add/find/del/exit): ")
+    if cmd == "add":
+        name = input("name: ")
+        num = input("number: ")
+        phone[name] = num
+    elif cmd == "find":
+        name = input("name: ")
+        print(phone.get(name, "not found"))
+    elif cmd == "del":
+        name = input("name: ")
+        if name in phone:
+            del phone[name]
+            print("deleted")
+        else:
+            print("not found")
+    elif cmd == "exit":
+        break
+    else:
+        print("invalid")
+
+#15. dict from lists:
+keys = ["a", "b", "c"]
+vals = [1, 2, 3]
+d = dict(zip(keys, vals))
+print(d)

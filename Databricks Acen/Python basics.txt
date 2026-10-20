@@ -1,0 +1,302 @@
+#1. biggest:
+a = float(input("a: "))
+b = float(input("b: "))
+c = float(input("c: "))
+if a >= b and a >= c:
+    print(a)
+elif b >= a and b >= c:
+    print(b)
+else:
+    print(c)
+
+#2. sentence:
+w1 = "All"
+w2 = "work"
+w3 = "and"
+w4 = "no"
+w5 = "play"
+w6 = "make"
+w7 = "Jack"
+w8 = "a"
+w9 = "dull"
+w10 = "boy."
+print(w1, w2, w3, w4, w5, w6, w7, w8, w9, w10)
+
+#3. count vowels:
+s = input("str: ")
+v = "aeiouAEIOU"
+cnt = 0
+for ch in s:
+    if ch in v:
+        cnt += 1
+print(cnt)
+
+#4. calc:
+n1 = float(input("n1: "))
+n2 = float(input("n2: "))
+op = input("op: ")
+if op == "+":
+    print(n1 + n2)
+elif op == "-":
+    print(n1 - n2)
+elif op == "*":
+    print(n1 * n2)
+elif op == "/":
+    if n2 != 0:
+        print(n1 / n2)
+    else:
+        print("Err")
+else:
+    print("Err")
+
+#5. mod:
+print(5 % 2)
+print(9 % 5)
+print(15 % 12)
+print(12 % 15)
+print(0 % 7)
+try:
+    print(7 % 0)
+except:
+    print("Err")
+
+#6. vote:
+age = int(input("age: "))
+if 18 <= age <= 60:
+    print("can vote")
+elif 0 < age < 18:
+    print("cannot vote")
+else:
+    print("invalid")
+
+#7. vowel:
+ch = input("ch: ")
+if ch.lower() in "aeiou":
+    print("vowel")
+else:
+    print("not vowel")
+
+#8. admin:
+user = input("user: ")
+pwd = input("pwd: ")
+if user == "Admin" and pwd == "123":
+    print("Welcome Admin")
+else:
+    print("invalid")
+
+#9. sum/avg:
+tot = 0
+cnt = 0
+while True:
+    inp = input("num or done: ")
+    if inp.lower() == "done":
+        break
+    try:
+        tot += float(inp)
+        cnt += 1
+    except:
+        continue
+print(tot, tot / cnt if cnt else 0)
+
+#10. max3:
+x = float(input("x: "))
+y = float(input("y: "))
+z = float(input("z: "))
+if x >= y:
+    if x >= z:
+        m = x
+    else:
+        m = z
+else:
+    if y >= z:
+        m = y
+    else:
+        m = z
+print(m)
+
+#11. op calc:
+x = float(input("x: "))
+y = float(input("y: "))
+op = input("op: ")
+if op == "+":
+    print(x + y)
+elif op == "-":
+    print(x - y)
+elif op == "*":
+    print(x * y)
+elif op == "/":
+    if y != 0:
+        print(x / y)
+    else:
+        print("Err")
+else:
+    print("Err")
+
+#12. pos/neg:
+num = float(input("num: "))
+if num > 0:
+    print("positive")
+elif num < 0:
+    print("negative")
+else:
+    print("zero")
+
+#13. leap:
+yr = int(input("year: "))
+if (yr % 4 == 0 and yr % 100 != 0) or (yr % 400 == 0):
+    print("leap")
+else:
+    print("not leap")
+
+#14. grade:
+m = float(input("marks: "))
+if 90 <= m <= 100:
+    g = "A"
+elif m >= 80:
+    g = "B"
+elif m >= 70:
+    g = "C"
+elif m >= 60:
+    g = "D"
+elif m >= 0:
+    g = "Fail"
+else:
+    g = "invalid"
+print(g)
+
+#15. triangle:
+s1 = float(input("s1: "))
+s2 = float(input("s2: "))
+s3 = float(input("s3: "))
+if s1 + s2 > s3 and s1 + s3 > s2 and s2 + s3 > s1:
+    if s1 == s2 == s3:
+        print("equilateral")
+    elif s1 == s2 or s1 == s3 or s2 == s3:
+        print("isosceles")
+    else:
+        print("scalene")
+else:
+    print("invalid")
+
+#16. logical ops:
+print(True or False)
+print(True and False)
+print(not False and True)
+print(True or 7)
+print(False or 7)
+print(True and 0)
+print(False or 8)
+print("happy" and "sad")
+print("happy" or "sad")
+print("" and "sad")
+print("happy" and "")
+
+#17. while even:
+i = 1
+while i <= 25:
+    if i % 2 == 0:
+        print(i, end=" ")
+    i += 1
+print()
+
+#18. for even:
+for i in range(1, 26):
+    if i % 2 == 0:
+        print(i, end=" ")
+print()
+
+#19. factorial:
+n = int(input("n: "))
+fact = 1
+i = 1
+while i <= n:
+    fact *= i
+    i += 1
+print(fact)
+
+#20. sum squares:
+def sos(n):
+    s = 0
+    for d in str(n):
+        s += int(d) ** 2
+    return s
+print(sos(1))
+print(sos(9))
+print(sos(11))
+print(sos(121))
+
+#21. Fibonacci:
+a, b = 0, 1
+fib = []
+while a <= 50:
+    fib.append(a)
+    a, b = b, a + b
+fib = [x for x in fib if x != 0 and x <= 34]
+print(" ".join(map(str, fib)))
+
+#22. primes:
+for num in range(2, 101):
+    prime = True
+    for i in range(2, int(num ** 0.5) + 1):
+        if num % i == 0:
+            prime = False
+            break
+    if prime:
+        print(num, end=" ")
+print()
+
+#23. for else:
+for i in range(1, 11):
+    print(i, end=" ")
+else:
+    print("\nsuccessful")
+
+#24. table:
+n = int(input("num: "))
+i = 1
+while i <= 10:
+    print(n, "x", i, "=", n * i)
+    i += 1
+
+#25. ATM:
+bal = 1000
+w = float(input("withdraw: "))
+if w <= 0:
+    print("invalid")
+elif w > bal:
+    print("insufficient")
+else:
+    bal -= w
+    print("bal:", bal)
+
+#26. sum even:
+i = 1
+s = 0
+while i <= 50:
+    if i % 2 == 0:
+        s += i
+    i += 1
+print(s)
+
+#27. list sum:
+lst = [10, 20, 30, 40, 50]
+s = 0
+i = 0
+while i < len(lst):
+    inp = input("Enter or break: ")
+    if inp.lower() == "break":
+        break
+    s += lst[i]
+    i += 1
+print(s)
+
+#28. reverse:
+num = int(input("num: "))
+rev = 0
+temp = abs(num)
+while temp:
+    rev = rev * 10 + temp % 10
+    temp //= 10
+if num < 0:
+    rev = -rev
+print(rev)
