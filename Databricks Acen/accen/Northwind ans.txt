@@ -1,0 +1,597 @@
+-- Check that the Northwind database exists
+SHOW DATABASES LIKE 'Northwind';
+
+-- Use the Northwind database
+USE Northwind;
+
+-- List all tables in the Northwind database
+SHOW TABLES;
+
+-- Check a few records from each table (feel free to adjust the LIMIT as needed)
+SELECT * FROM Category LIMIT 5;
+SELECT * FROM Region LIMIT 5;
+SELECT * FROM Territory LIMIT 5;
+SELECT * FROM CustomerDemographics LIMIT 5;
+SELECT * FROM Customer LIMIT 5;
+SELECT * FROM Employee LIMIT 5;
+SELECT * FROM Supplier LIMIT 5;
+SELECT * FROM Product LIMIT 5;
+SELECT * FROM Shipper LIMIT 5;
+SELECT * FROM SalesOrder LIMIT 5;
+SELECT * FROM OrderDetail LIMIT 5;
+
+--------------------------------------------------------------------------------
+-- Step 3: Data Retrieval Queries
+--------------------------------------------------------------------------------
+-- *******************************
+-- Queries Using a Single Table
+-- *******************************
+
+-- 1. Count the total number of customers
+SELECT COUNT(*) AS TotalCustomers FROM Customer;
+
+-- 2. Calculate the average unit price of products.
+SELECT AVG(unitPrice) AS AvgUnitPrice FROM Product;
+
+-- 3. Find the maximum order quantity in order details.
+SELECT MAX(quantity) AS MaxOrderQuantity FROM OrderDetail;
+
+-- 4. Sum the total freight charges for all sales orders.
+SELECT SUM(freight) AS TotalFreight FROM SalesOrder;
+
+-- 5. Get the minimum units in stock for products.
+SELECT MIN(unitsInStock) AS MinUnitsInStock FROM Product;
+
+-- 6. Count the number of orders placed by each customer.
+SELECT custId, COUNT(*) AS TotalOrders
+FROM SalesOrder
+GROUP BY custId;
+
+-- 7. Calculate the average unit price of products in each category.
+SELECT categoryId, AVG(unitPrice) AS AvgUnitPrice
+FROM Product
+GROUP BY categoryId;
+
+-- 8. Find the total quantity ordered for each product.
+SELECT productId, SUM(quantity) AS TotalQuantity
+FROM OrderDetail
+GROUP BY productId;
+
+-- 9. Get the total freight charges for each shipper.
+SELECT shipperid, SUM(freight) AS TotalFreight
+FROM SalesOrder
+GROUP BY shipperid;
+
+-- 10. Find the maximum unit price of products supplied by each supplier.
+SELECT supplierId, MAX(unitPrice) AS MaxUnitPrice
+FROM Product
+GROUP BY supplierId;
+
+-- 11. Total quantity and total sales amount for each product by each customer.
+SELECT so.custId, od.productId,
+       SUM(od.quantity) AS TotalQuantity,
+       SUM(od.unitPrice * od.quantity * (1 - od.discount)) AS TotalSalesAmount
+FROM SalesOrder so
+JOIN OrderDetail od ON so.orderId = od.orderId
+GROUP BY so.custId, od.productId;
+
+-- 12. Average unit price and total quantity ordered for each product by each supplier.
+SELECT p.supplierId, p.productId,
+       AVG(od.unitPrice) AS AvgUnitPrice,
+       SUM(od.quantity) AS TotalQuantity
+FROM Product p
+JOIN OrderDetail od ON p.productId = od.productId
+GROUP BY p.supplierId, p.productId;
+
+-- 13. Total freight and total number of orders for each customer by each shipper.
+SELECT custId, shipperid, 
+       SUM(freight) AS TotalFreight, COUNT(*) AS TotalOrders
+FROM SalesOrder
+GROUP BY custId, shipperid;
+
+-- 14. Total sales amount and total discount for each product by each category.
+SELECT p.categoryId, od.productId,
+       SUM(od.unitPrice * od.quantity * (1 - od.discount)) AS TotalSalesAmount,
+       SUM(od.discount) AS TotalDiscount
+FROM Product p
+JOIN OrderDetail od ON p.productId = od.productId
+GROUP BY p.categoryId, od.productId;
+
+-- 15. Total quantity and total sales amount for each employee by each customer.
+SELECT so.employeeId, so.custId,
+       SUM(od.quantity) AS TotalQuantity,
+       SUM(od.unitPrice * od.quantity * (1 - od.discount)) AS TotalSalesAmount
+FROM SalesOrder so
+JOIN OrderDetail od ON so.orderId = od.orderId
+GROUP BY so.employeeId, so.custId;
+
+-- 16. Total Sales by Employee and Year where total sales > 10000.
+SELECT employeeId, YEAR(orderDate) AS OrderYear,
+       SUM(od.unitPrice * od.quantity * (1 - od.discount)) AS TotalSales
+FROM SalesOrder so
+JOIN OrderDetail od ON so.orderId = od.orderId
+GROUP BY employeeId, YEAR(orderDate)
+HAVING TotalSales > 10000;
+
+-- 17. Average Order Value by Customer and Year where average order > 500.
+SELECT custId, OrderYear, AVG(OrderTotal) AS AvgOrderValue
+FROM (
+    SELECT so.custId, YEAR(so.orderDate) AS OrderYear, so.orderId,
+           SUM(od.unitPrice * od.quantity * (1 - od.discount)) AS OrderTotal
+    FROM SalesOrder so
+    JOIN OrderDetail od ON so.orderId = od.orderId
+    GROUP BY so.custId, YEAR(so.orderDate), so.orderId
+) AS Orders
+GROUP BY custId, OrderYear
+HAVING AVG(OrderTotal) > 500;
+
+-- 18. Total Quantity Ordered by Product and Year where total quantity > 100.
+SELECT od.productId, YEAR(so.orderDate) AS OrderYear, SUM(od.quantity) AS TotalQuantity
+FROM SalesOrder so
+JOIN OrderDetail od ON so.orderId = od.orderId
+GROUP BY od.productId, YEAR(so.orderDate)
+HAVING TotalQuantity > 100;
+
+-- 19. Total Freight Cost by Shipper and Year where total freight > 500.
+SELECT shipperid, YEAR(orderDate) AS OrderYear, SUM(freight) AS TotalFreight
+FROM SalesOrder
+GROUP BY shipperid, YEAR(orderDate)
+HAVING TotalFreight > 500;
+
+-- 20. Total Orders by Country and Year where orders > 50.
+SELECT c.country, YEAR(so.orderDate) AS OrderYear, COUNT(*) AS TotalOrders
+FROM SalesOrder so
+JOIN Customer c ON so.custId = c.custId
+GROUP BY c.country, YEAR(so.orderDate)
+HAVING TotalOrders > 50;
+
+--------------------------------------------------------------------------------
+-- Queries Using INNER JOIN
+--------------------------------------------------------------------------------
+
+-- 21. List all sales order ids with customer contact names.
+SELECT so.orderId, c.contactName
+FROM SalesOrder so
+INNER JOIN Customer c ON so.custId = c.custId;
+
+-- 22. List all product names with their supplier names.
+SELECT p.productName, s.companyName AS SupplierName
+FROM Product p
+INNER JOIN Supplier s ON p.supplierId = s.supplierId;
+
+-- 23. List all sales orders with employee full name.
+SELECT so.orderId, CONCAT(e.firstname, ' ', e.lastname) AS EmployeeName
+FROM SalesOrder so
+INNER JOIN Employee e ON so.employeeId = e.employeeId;
+
+-- 24. List all order ids along with their product names.
+SELECT od.orderId, p.productName
+FROM OrderDetail od
+INNER JOIN Product p ON od.productId = p.productId;
+
+-- 25. List all sales order ids with shipper names.
+SELECT so.orderId, sh.companyName AS ShipperName
+FROM SalesOrder so
+INNER JOIN Shipper sh ON so.shipperid = sh.shipperid;
+
+-- 26. List all product names with their category names.
+SELECT p.productName, c.categoryName
+FROM Product p
+INNER JOIN Category c ON p.categoryId = c.categoryId;
+
+-- 27. List all employee names with their manager’s name.
+SELECT e.firstname AS EmployeeFirstName, e.lastname AS EmployeeLastName,
+       m.firstname AS ManagerFirstName, m.lastname AS ManagerLastName
+FROM Employee e
+LEFT JOIN Employee m ON e.mgrId = m.employeeId;
+
+-- 28. List all customer contact names with their sales order ids.
+SELECT c.contactName, so.orderId
+FROM Customer c
+INNER JOIN SalesOrder so ON c.custId = so.custId;
+
+-- 29. List all sales order ids with corresponding product ids and quantity ordered.
+SELECT orderId, productId, quantity
+FROM OrderDetail;
+
+-- 30. List all employee names with their territory descriptions.
+SELECT e.firstname, e.lastname, t.territorydescription
+FROM Employee e
+INNER JOIN EmployeeTerritory et ON e.employeeId = et.employeeId
+INNER JOIN Territory t ON et.territoryId = t.territoryId;
+
+-- 31. List all product names with their supplier company name and category name.
+SELECT p.productName, s.companyName, c.categoryName
+FROM Product p
+INNER JOIN Supplier s ON p.supplierId = s.supplierId
+INNER JOIN Category c ON p.categoryId = c.categoryId;
+
+-- 32. List all sales order ids with customer names and employee names.
+SELECT so.orderId, c.contactName AS CustomerName,
+       CONCAT(e.firstname, ' ', e.lastname) AS EmployeeName
+FROM SalesOrder so
+INNER JOIN Customer c ON so.custId = c.custId
+INNER JOIN Employee e ON so.employeeId = e.employeeId;
+
+-- 33. List all product names with their order ids and quantity ordered.
+SELECT p.productName, od.orderId, od.quantity
+FROM OrderDetail od
+INNER JOIN Product p ON od.productId = p.productId;
+
+-- 34. List all customer contact names with their sales order id, product id and quantity purchased.
+SELECT c.contactName, so.orderId, od.productId, od.quantity
+FROM SalesOrder so
+INNER JOIN Customer c ON so.custId = c.custId
+INNER JOIN OrderDetail od ON so.orderId = od.orderId;
+
+-- 35. List all employees’ first names with their sales order ids and customer contact names.
+SELECT e.firstname, so.orderId, c.contactName
+FROM SalesOrder so
+INNER JOIN Employee e ON so.employeeId = e.employeeId
+INNER JOIN Customer c ON so.custId = c.custId;
+
+-- 36. Retrieve employee names with total sales amount (ascending by sales).
+SELECT e.firstname, e.lastname,
+       SUM(od.unitPrice * od.quantity * (1 - od.discount)) AS TotalSales
+FROM SalesOrder so
+INNER JOIN OrderDetail od ON so.orderId = od.orderId
+INNER JOIN Employee e ON so.employeeId = e.employeeId
+GROUP BY e.employeeId, e.firstname, e.lastname
+ORDER BY TotalSales ASC;
+
+-- 37. Retrieve total revenue by category (descending order).
+SELECT p.categoryId,
+       SUM(od.unitPrice * od.quantity * (1 - od.discount)) AS TotalRevenue
+FROM Product p
+INNER JOIN OrderDetail od ON p.productId = od.productId
+GROUP BY p.categoryId
+ORDER BY TotalRevenue DESC;
+
+-- 38. Retrieve average discount by supplier (descending order).
+SELECT s.supplierId, s.companyName, AVG(od.discount) AS AvgDiscount
+FROM Supplier s
+INNER JOIN Product p ON s.supplierId = p.supplierId
+INNER JOIN OrderDetail od ON p.productId = od.productId
+GROUP BY s.supplierId, s.companyName
+ORDER BY AvgDiscount DESC;
+
+-- 39. Retrieve employee names with customer company name and total orders (ordered by total orders descending).
+SELECT e.employeeId, e.firstname, e.lastname, c.companyName, COUNT(*) AS TotalOrders
+FROM SalesOrder so
+INNER JOIN Employee e ON so.employeeId = e.employeeId
+INNER JOIN Customer c ON so.custId = c.custId
+GROUP BY e.employeeId, e.firstname, e.lastname, c.companyName
+ORDER BY TotalOrders DESC;
+
+-- 40. Retrieve total sales by each customer on each product (ascending by total sales).
+SELECT c.companyName, p.productName,
+       SUM(od.unitPrice * od.quantity * (1 - od.discount)) AS TotalSales
+FROM SalesOrder so
+INNER JOIN Customer c ON so.custId = c.custId
+INNER JOIN OrderDetail od ON so.orderId = od.orderId
+INNER JOIN Product p ON od.productId = p.productId
+GROUP BY c.companyName, p.productName
+ORDER BY TotalSales ASC;
+
+-- 41. Total revenue by employee and product (descending by revenue and product name).
+SELECT e.firstname, e.lastname, p.productName,
+       SUM(od.unitPrice * od.quantity * (1 - od.discount)) AS TotalRevenue
+FROM SalesOrder so
+INNER JOIN Employee e ON so.employeeId = e.employeeId
+INNER JOIN OrderDetail od ON so.orderId = od.orderId
+INNER JOIN Product p ON od.productId = p.productId
+GROUP BY e.employeeId, p.productId, e.firstname, e.lastname, p.productName
+ORDER BY TotalRevenue DESC, p.productName ASC;
+
+-- 42. Retrieve average order value by employee for each customer (rounded to nearest integer).
+SELECT EmployeeName, companyName, ROUND(AVG(OrderTotal)) AS AvgOrderValue
+FROM (
+    SELECT so.orderId, so.employeeId, so.custId,
+           SUM(od.unitPrice * od.quantity * (1 - od.discount)) AS OrderTotal,
+           CONCAT(e.firstname, ' ', e.lastname) AS EmployeeName,
+           c.companyName
+    FROM SalesOrder so
+    JOIN OrderDetail od ON so.orderId = od.orderId
+    JOIN Employee e ON so.employeeId = e.employeeId
+    JOIN Customer c ON so.custId = c.custId
+    GROUP BY so.orderId, so.employeeId, so.custId, EmployeeName, c.companyName
+) t
+GROUP BY employeeId, companyName, EmployeeName
+ORDER BY AvgOrderValue DESC;
+
+-- 43. Retrieve total sales by employee for each customer (ordered by total sales descending).
+SELECT e.employeeId, e.firstname, e.lastname, c.companyName,
+       SUM(od.unitPrice * od.quantity * (1 - od.discount)) AS TotalSales
+FROM SalesOrder so
+JOIN Employee e ON so.employeeId = e.employeeId
+JOIN Customer c ON so.custId = c.custId
+JOIN OrderDetail od ON so.orderId = od.orderId
+GROUP BY e.employeeId, c.companyName, e.firstname, e.lastname
+ORDER BY TotalSales DESC;
+
+-- 44. Retrieve total sales by employee for each customer in each year.
+SELECT e.firstname, e.lastname, c.companyName, YEAR(so.orderDate) AS OrderYear,
+       SUM(od.unitPrice * od.quantity * (1 - od.discount)) AS TotalSales
+FROM SalesOrder so
+JOIN Employee e ON so.employeeId = e.employeeId
+JOIN Customer c ON so.custId = c.custId
+JOIN OrderDetail od ON so.orderId = od.orderId
+GROUP BY e.employeeId, c.companyName, YEAR(so.orderDate), e.firstname, e.lastname
+ORDER BY TotalSales DESC;
+
+-- 45. Retrieve top 2 employee-customer pairs by average order amount in 2008.
+SELECT e.firstname, e.lastname, c.companyName, YEAR(so.orderDate) AS OrderYear,
+       AVG(od.unitPrice * od.quantity * (1 - od.discount)) AS AvgSales
+FROM SalesOrder so
+JOIN Employee e ON so.employeeId = e.employeeId
+JOIN Customer c ON so.custId = c.custId
+JOIN OrderDetail od ON so.orderId = od.orderId
+WHERE YEAR(so.orderDate) = 2008
+GROUP BY e.employeeId, c.companyName, YEAR(so.orderDate), e.firstname, e.lastname
+ORDER BY AvgSales DESC
+LIMIT 2;
+
+-- 46. Retrieve product name, category, and total quantity sold in each year.
+SELECT p.productName, c.categoryName, YEAR(so.orderDate) AS OrderYear,
+       SUM(od.quantity) AS TotalQuantitySold
+FROM OrderDetail od
+JOIN SalesOrder so ON od.orderId = so.orderId
+JOIN Product p ON od.productId = p.productId
+JOIN Category c ON p.categoryId = c.categoryId
+GROUP BY p.productName, c.categoryName, YEAR(so.orderDate)
+ORDER BY TotalQuantitySold DESC;
+
+-- 47. Retrieve revenue generated by each employee in each year on each product.
+SELECT e.firstname, e.lastname, p.productName, YEAR(so.orderDate) AS OrderYear,
+       SUM(od.unitPrice * od.quantity * (1 - od.discount)) AS TotalRevenue
+FROM SalesOrder so
+JOIN Employee e ON so.employeeId = e.employeeId
+JOIN OrderDetail od ON so.orderId = od.orderId
+JOIN Product p ON od.productId = p.productId
+GROUP BY e.employeeId, p.productId, YEAR(so.orderDate), e.firstname, e.lastname, p.productName
+ORDER BY TotalRevenue DESC;
+
+-- 48. Retrieve average discount by company on each product in each year (rounded to 4 decimals).
+SELECT c.companyName, p.productName, YEAR(so.orderDate) AS OrderYear,
+       ROUND(AVG(od.discount), 4) AS AvgDiscount
+FROM SalesOrder so
+JOIN Customer c ON so.custId = c.custId
+JOIN OrderDetail od ON so.orderId = od.orderId
+JOIN Product p ON od.productId = p.productId
+GROUP BY c.companyName, p.productName, YEAR(so.orderDate);
+
+-- 49. Retrieve total number of orders given to each customer by employee in each year.
+SELECT e.firstname, e.lastname, c.companyName, YEAR(so.orderDate) AS OrderYear,
+       COUNT(DISTINCT so.orderId) AS TotalOrders
+FROM SalesOrder so
+JOIN Employee e ON so.employeeId = e.employeeId
+JOIN Customer c ON so.custId = c.custId
+GROUP BY e.employeeId, c.companyName, YEAR(so.orderDate), e.firstname, e.lastname;
+
+-- 50. Retrieve average order amount by employee for each customer in each year for each product.
+SELECT e.firstname, e.lastname, c.companyName, p.productName, YEAR(so.orderDate) AS OrderYear,
+       AVG(od.unitPrice * od.quantity * (1 - od.discount)) AS AvgOrderAmount
+FROM SalesOrder so
+JOIN Employee e ON so.employeeId = e.employeeId
+JOIN Customer c ON so.custId = c.custId
+JOIN OrderDetail od ON so.orderId = od.orderId
+JOIN Product p ON od.productId = p.productId
+GROUP BY e.employeeId, c.companyName, p.productName, YEAR(so.orderDate), e.firstname, e.lastname, p.productName;
+
+--------------------------------------------------------------------------------
+-- Queries Using SELF JOIN
+--------------------------------------------------------------------------------
+
+-- 51. Retrieve two different product names with the same supplier.
+SELECT p1.productName AS Product1, p2.productName AS Product2, s.companyName AS SupplierName
+FROM Product p1
+JOIN Product p2 ON p1.supplierId = p2.supplierId AND p1.productId < p2.productId
+JOIN Supplier s ON p1.supplierId = s.supplierId;
+
+-- 52. Retrieve two different customers from the same city.
+SELECT c1.custId AS Customer1, c2.custId AS Customer2, c1.city
+FROM Customer c1
+JOIN Customer c2 ON c1.city = c2.city AND c1.custId < c2.custId;
+
+-- 53. Find orders with the same ship country.
+SELECT so1.orderId AS Order1, so2.orderId AS Order2, so1.shipCountry
+FROM SalesOrder so1
+JOIN SalesOrder so2 ON so1.shipCountry = so2.shipCountry AND so1.orderId < so2.orderId;
+
+-- 54. Find employees with the same job title.
+SELECT e1.firstname AS Employee1, e2.firstname AS Employee2, e1.title
+FROM Employee e1
+JOIN Employee e2 ON e1.title = e2.title AND e1.employeeId < e2.employeeId;
+
+-- 55. Find products in the same category.
+SELECT p1.productName AS Product1, p2.productName AS Product2, p1.categoryId
+FROM Product p1
+JOIN Product p2 ON p1.categoryId = p2.categoryId AND p1.productId < p2.productId;
+
+-- 56. Find orders with the same customer.
+SELECT so1.orderId AS Order1, so2.orderId AS Order2, so1.custId
+FROM SalesOrder so1
+JOIN SalesOrder so2 ON so1.custId = so2.custId AND so1.orderId < so2.orderId;
+
+-- 57. Find suppliers from the same country.
+SELECT s1.supplierId AS Supplier1, s2.supplierId AS Supplier2, s1.country
+FROM Supplier s1
+JOIN Supplier s2 ON s1.country = s2.country AND s1.supplierId < s2.supplierId;
+
+-- 58. Find employees with the same hire date.
+SELECT e1.firstname AS Employee1, e2.firstname AS Employee2, e1.hireDate
+FROM Employee e1
+JOIN Employee e2 ON e1.hireDate = e2.hireDate AND e1.employeeId < e2.employeeId;
+
+-- 59. Find customers with the same contact title.
+SELECT c1.custId AS Customer1, c2.custId AS Customer2, c1.contactTitle
+FROM Customer c1
+JOIN Customer c2 ON c1.contactTitle = c2.contactTitle AND c1.custId < c2.custId;
+
+--------------------------------------------------------------------------------
+-- Queries Using Nested Sub Queries
+--------------------------------------------------------------------------------
+
+-- 60. Find the total sales for each employee.
+SELECT e.employeeId,
+       (SELECT SUM(od.unitPrice * od.quantity * (1 - od.discount))
+        FROM SalesOrder so
+        JOIN OrderDetail od ON so.orderId = od.orderId
+        WHERE so.employeeId = e.employeeId) AS TotalSales
+FROM Employee e;
+
+-- 61. List customers with total order amount greater than $10,000.
+SELECT * FROM (
+    SELECT c.custId,
+           (SELECT SUM(od.unitPrice * od.quantity * (1 - od.discount))
+            FROM SalesOrder so
+            JOIN OrderDetail od ON so.orderId = od.orderId
+            WHERE so.custId = c.custId) AS TotalOrderAmount
+    FROM Customer c
+) t
+WHERE TotalOrderAmount > 10000;
+
+-- 62. Find the most expensive product in each category.
+SELECT p1.categoryId, p1.productName
+FROM Product p1
+WHERE p1.unitPrice = (
+    SELECT MAX(p2.unitPrice)
+    FROM Product p2
+    WHERE p2.categoryId = p1.categoryId
+);
+
+-- 63. List employees who have handled orders for more than 50 different customers.
+SELECT so.employeeId,
+       (SELECT COUNT(DISTINCT so2.custId)
+        FROM SalesOrder so2
+        WHERE so2.employeeId = so.employeeId) AS CustomerCount
+FROM SalesOrder so
+GROUP BY so.employeeId
+HAVING CustomerCount > 50;
+
+-- 64. Find the average order value for each customer.
+SELECT c.custId,
+       (SELECT AVG(OrderTotal) FROM (
+            SELECT so.orderId,
+                   SUM(od.unitPrice * od.quantity * (1 - od.discount)) AS OrderTotal
+            FROM SalesOrder so
+            JOIN OrderDetail od ON so.orderId = od.orderId
+            WHERE so.custId = c.custId
+            GROUP BY so.orderId
+       ) as Orders) AS AvgOrderValue
+FROM Customer c;
+
+-- 65. List products that have never been ordered.
+SELECT productId, productName
+FROM Product
+WHERE productId NOT IN (SELECT DISTINCT productId FROM OrderDetail);
+
+-- 66. List suppliers who supply more than 4 different products.
+SELECT supplierId, COUNT(productId) AS ProductCount
+FROM Product
+GROUP BY supplierId
+HAVING COUNT(productId) > 4;
+
+-- 67. Find the total quantity of products ordered by each customer.
+SELECT so.custId,
+       (SELECT SUM(od.quantity)
+        FROM SalesOrder so2
+        JOIN OrderDetail od ON so2.orderId = od.orderId
+        WHERE so2.custId = so.custId) AS TotalQuantity
+FROM SalesOrder so
+GROUP BY so.custId;
+
+-- 68. List the top 5 customers by total order value.
+SELECT c.custId,
+       (SELECT SUM(od.unitPrice * od.quantity * (1 - od.discount))
+        FROM SalesOrder so JOIN OrderDetail od ON so.orderId = od.orderId
+        WHERE so.custId = c.custId) AS TotalOrderValue
+FROM Customer c
+ORDER BY TotalOrderValue DESC
+LIMIT 5;
+
+--------------------------------------------------------------------------------
+-- Queries Using Correlated Sub Queries
+--------------------------------------------------------------------------------
+
+-- 69. Find customers who have placed more than 5 orders.
+SELECT c.custId, c.companyName
+FROM Customer c
+WHERE (SELECT COUNT(*) FROM SalesOrder so WHERE so.custId = c.custId) > 5;
+
+-- 70. Find suppliers who supply more than 3 products.
+SELECT s.supplierId, s.companyName
+FROM Supplier s
+WHERE (SELECT COUNT(*) FROM Product p WHERE p.supplierId = s.supplierId) > 3;
+
+-- 71. List orders that include products from more than 3 different categories.
+SELECT so.orderId
+FROM SalesOrder so
+WHERE (SELECT COUNT(DISTINCT p.categoryId)
+       FROM OrderDetail od
+       JOIN Product p ON od.productId = p.productId
+       WHERE od.orderId = so.orderId) > 3;
+
+-- 72. Find employees who have not processed any orders in the last year.
+SELECT e.employeeId, e.firstname, e.lastname
+FROM Employee e
+WHERE NOT EXISTS (
+    SELECT 1 FROM SalesOrder so
+    WHERE so.employeeId = e.employeeId
+      AND YEAR(so.orderDate) = YEAR(CURDATE()) - 1
+);
+
+-- 73. List customers who have ordered products from all categories.
+SELECT c.custId, c.companyName
+FROM Customer c
+WHERE (SELECT COUNT(DISTINCT p.categoryId)
+       FROM SalesOrder so
+       JOIN OrderDetail od ON so.orderId = od.orderId
+       JOIN Product p ON od.productId = p.productId
+       WHERE so.custId = c.custId) = (SELECT COUNT(*) FROM Category);
+
+-- 74. Find products that have been ordered more than 100 times.
+SELECT p.productId, p.productName
+FROM Product p
+WHERE (SELECT SUM(od.quantity)
+       FROM OrderDetail od
+       WHERE od.productId = p.productId) > 100;
+
+-- 75. List employees who have processed orders for more than 20 different customers.
+SELECT e.employeeId, e.firstname, e.lastname
+FROM Employee e
+WHERE (SELECT COUNT(DISTINCT so.custId)
+       FROM SalesOrder so
+       WHERE so.employeeId = e.employeeId) > 20;
+
+-- 76. List all orders with customer and employee details.
+SELECT so.orderId, c.companyName, e.firstname, e.lastname, so.orderDate
+FROM SalesOrder so
+JOIN Customer c ON so.custId = c.custId
+JOIN Employee e ON so.employeeId = e.employeeId;
+
+-- 77. List all products ordered by customers whose region is NULL.
+SELECT DISTINCT p.productId, p.productName
+FROM SalesOrder so
+JOIN Customer c ON so.custId = c.custId
+JOIN OrderDetail od ON so.orderId = od.orderId
+JOIN Product p ON od.productId = p.productId
+WHERE c.region IS NULL;
+
+-- 78. List employees who have processed orders for Mexico customers.
+SELECT DISTINCT e.employeeId, e.firstname, e.lastname
+FROM SalesOrder so
+JOIN Customer c ON so.custId = c.custId
+JOIN Employee e ON so.employeeId = e.employeeId
+WHERE c.country = 'Mexico';
+
+-- 79. List all orders with their shipping details.
+SELECT so.orderId, so.orderDate, sh.companyName AS Shipper,
+       so.shipAddress, so.shipCity, so.shipCountry
+FROM SalesOrder so
+JOIN Shipper sh ON so.shipperid = sh.shipperid;
+
+-- 80. Find the total number of orders shipped by each shipper.
+SELECT sh.shipperid, sh.companyName, 
+       (SELECT COUNT(*) FROM SalesOrder so WHERE so.shipperid = sh.shipperid) AS TotalOrders
+FROM Shipper sh;

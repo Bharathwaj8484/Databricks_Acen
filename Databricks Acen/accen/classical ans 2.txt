@@ -1,0 +1,307 @@
+USE classicmodels;
+
+-- 1. How many customers do we have?
+SELECT COUNT(*) AS total_customers FROM customers;
+
+-- 2. How many orders are there in total?
+SELECT COUNT(*) AS total_orders FROM orders;
+
+-- 3. How many orders does each customer have?
+SELECT customerNumber, COUNT(*) AS order_count FROM orders GROUP BY customerNumber;
+
+-- 4. How many orders are there for each status?
+SELECT status, COUNT(*) AS order_count FROM orders GROUP BY status;
+
+-- 5. How many orders were placed on each date?
+SELECT orderDate, COUNT(*) AS order_count FROM orders GROUP BY orderDate;
+
+-- 6. What’s the earliest order date?
+SELECT MIN(orderDate) AS earliest_order FROM orders;
+
+-- 7. What’s the latest order date?
+SELECT MAX(orderDate) AS latest_order FROM orders;
+
+-- 8. How many orders per year?
+SELECT YEAR(orderDate) AS year, COUNT(*) AS order_count FROM orders GROUP BY year;
+
+-- 9. How many orders per month?
+SELECT MONTH(orderDate) AS month, COUNT(*) AS order_count FROM orders GROUP BY month;
+
+-- 10. How many orders per day of the week?
+SELECT DAYNAME(orderDate) AS day_of_week, COUNT(*) AS order_count FROM orders GROUP BY day_of_week;
+
+-- 11. How many orders per quarter?
+SELECT QUARTER(orderDate) AS quarter, COUNT(*) AS order_count FROM orders GROUP BY quarter;
+
+-- 12. How many orders per customer and status, sorted by customer number?
+SELECT customerNumber, status, COUNT(*) AS order_count FROM orders GROUP BY customerNumber, status ORDER BY customerNumber;
+
+-- 13. How many orders per customer per year, sorted by customer number?
+SELECT customerNumber, YEAR(orderDate) AS year, COUNT(*) AS order_count FROM orders GROUP BY customerNumber, year ORDER BY customerNumber;
+
+-- 14. How many orders in the first 10 even weeks?
+SELECT WEEK(orderDate) AS week, COUNT(*) AS order_count FROM orders WHERE WEEK(orderDate) % 2 = 0 GROUP BY week ORDER BY week LIMIT 10;
+
+-- 15. How many orders per status per year, sorted by status?
+SELECT status, YEAR(orderDate) AS year, COUNT(*) AS order_count FROM orders GROUP BY status, year ORDER BY status;
+
+-- 16. How many orders per customer per year and quarter for 2004 and 2005?
+SELECT customerNumber, YEAR(orderDate) AS year, QUARTER(orderDate) AS quarter, COUNT(*) AS order_count 
+FROM orders WHERE YEAR(orderDate) IN (2004, 2005) GROUP BY customerNumber, year, quarter;
+
+-- 17. What are the top 5 longest customer names and their lengths?
+SELECT customerName, LENGTH(customerName) AS name_length FROM customers ORDER BY name_length DESC LIMIT 5;
+
+-- 18. Get the first 5 characters of customer names in uppercase
+SELECT UPPER(LEFT(customerName, 5)) AS short_name FROM customers;
+
+-- 19. Replace 'Ltd' with 'Limited' in customer names where it applies
+SELECT customerName, REPLACE(customerName, 'Ltd', 'Limited') AS modified_name FROM customers WHERE customerName LIKE '%Ltd%';
+
+-- 20. Round credit limits to the nearest thousand
+SELECT customerName, ROUND(creditLimit, -3) AS rounded_credit FROM customers;
+
+-- 21. Get order numbers with customer names
+SELECT o.orderNumber, c.customerName FROM orders o INNER JOIN customers c ON o.customerNumber = c.customerNumber;
+
+-- 22. Get order numbers with product names
+SELECT od.orderNumber, p.productName FROM orderdetails od INNER JOIN products p ON od.productCode = p.productCode;
+
+-- 23. Get order numbers with employee names who managed them
+SELECT o.orderNumber, e.firstName, e.lastName 
+FROM orders o INNER JOIN customers c ON o.customerNumber = c.customerNumber 
+INNER JOIN employees e ON c.salesRepEmployeeNumber = e.employeeNumber;
+
+-- 24. Get customer names with their sales rep names
+SELECT c.customerName, e.firstName, e.lastName 
+FROM customers c INNER JOIN employees e ON c.salesRepEmployeeNumber = e.employeeNumber;
+
+-- 25. Get product names with their ordered quantities
+SELECT p.productName, SUM(od.quantityOrdered) AS total_quantity 
+FROM products p INNER JOIN orderdetails od ON p.productCode = od.productCode GROUP BY p.productName;
+
+-- 26. Get order numbers with their total prices
+SELECT od.orderNumber, SUM(od.quantityOrdered * od.priceEach) AS total_price 
+FROM orderdetails od GROUP BY od.orderNumber;
+
+-- 27. Get customer names with order numbers and dates
+SELECT c.customerName, o.orderNumber, o.orderDate 
+FROM customers c INNER JOIN orders o ON c.customerNumber = o.customerNumber;
+
+-- 28. Get employee names with their office locations
+SELECT e.firstName, e.lastName, o.city 
+FROM employees e INNER JOIN offices o ON e.officeCode = o.officeCode;
+
+-- 29. Get order numbers, statuses, and customer names
+SELECT o.orderNumber, o.status, c.customerName 
+FROM orders o INNER JOIN customers c ON o.customerNumber = c.customerNumber;
+
+-- 30. Get customer names with their total number of orders
+SELECT c.customerName, COUNT(o.orderNumber) AS order_count 
+FROM customers c INNER JOIN orders o ON c.customerNumber = o.customerNumber GROUP BY c.customerName;
+
+-- 31. Get product names with their total quantities ordered
+SELECT p.productName, SUM(od.quantityOrdered) AS total_quantity 
+FROM products p INNER JOIN orderdetails od ON p.productCode = od.productCode GROUP BY p.productName;
+
+-- 32. Get employee names with the number of customers they handle
+SELECT e.firstName, e.lastName, COUNT(c.customerNumber) AS customer_count 
+FROM employees e INNER JOIN customers c ON e.employeeNumber = c.salesRepEmployeeNumber GROUP BY e.employeeNumber, e.firstName, e.lastName;
+
+-- 33. Get order numbers with their total prices (same as 26, repeated)
+SELECT od.orderNumber, SUM(od.quantityOrdered * od.priceEach) AS total_price 
+FROM orderdetails od GROUP BY od.orderNumber;
+
+-- 34. Get customer names with their total sales amounts
+SELECT c.customerName, SUM(od.quantityOrdered * od.priceEach) AS total_sales 
+FROM customers c INNER JOIN orders o ON c.customerNumber = o.customerNumber 
+INNER JOIN orderdetails od ON o.orderNumber = od.orderNumber GROUP BY c.customerName;
+
+-- 35. Get employee names with their total sales amounts
+SELECT e.firstName, e.lastName, SUM(od.quantityOrdered * od.priceEach) AS total_sales 
+FROM employees e INNER JOIN customers c ON e.employeeNumber = c.salesRepEmployeeNumber 
+INNER JOIN orders o ON c.customerNumber = o.customerNumber 
+INNER JOIN orderdetails od ON o.orderNumber = od.orderNumber GROUP BY e.employeeNumber, e.firstName, e.lastName;
+
+-- 36. Get customers with sales above $10,000
+SELECT c.customerNumber, c.customerName, SUM(od.quantityOrdered * od.priceEach) AS total_sales 
+FROM customers c INNER JOIN orders o ON c.customerNumber = o.customerNumber 
+INNER JOIN orderdetails od ON o.orderNumber = od.orderNumber GROUP BY c.customerNumber, c.customerName 
+HAVING total_sales > 10000;
+
+-- 37. Get customers with average order value above $3500
+SELECT c.customerNumber, c.customerName, AVG(od.quantityOrdered * od.priceEach) AS avg_order_value 
+FROM customers c INNER JOIN orders o ON c.customerNumber = o.customerNumber 
+INNER JOIN orderdetails od ON o.orderNumber = od.orderNumber GROUP BY c.customerNumber, c.customerName 
+HAVING avg_order_value > 3500;
+
+-- 38. Get customers with more than 5 orders
+SELECT c.customerNumber, c.customerName, COUNT(o.orderNumber) AS order_count 
+FROM customers c INNER JOIN orders o ON c.customerNumber = o.customerNumber GROUP BY c.customerNumber, c.customerName 
+HAVING order_count > 5;
+
+-- 39. Get products with sales above $180,000
+SELECT p.productCode, p.productName, SUM(od.quantityOrdered * od.priceEach) AS total_sales 
+FROM products p INNER JOIN orderdetails od ON p.productCode = od.productCode GROUP BY p.productCode, p.productName 
+HAVING total_sales > 180000;
+
+-- 40. Get products with average quantities ordered above 30
+SELECT p.productCode, p.productName, AVG(od.quantityOrdered) AS avg_quantity 
+FROM products p INNER JOIN orderdetails od ON p.productCode = od.productCode GROUP BY p.productCode, p.productName 
+HAVING avg_quantity > 30;
+
+-- 41. Get employees with sales above $500,000
+SELECT e.employeeNumber, e.firstName, e.lastName, SUM(od.quantityOrdered * od.priceEach) AS total_sales 
+FROM employees e INNER JOIN customers c ON e.employeeNumber = c.salesRepEmployeeNumber 
+INNER JOIN orders o ON c.customerNumber = o.customerNumber 
+INNER JOIN orderdetails od ON o.orderNumber = od.orderNumber GROUP BY e.employeeNumber, e.firstName, e.lastName 
+HAVING total_sales > 500000;
+
+-- 42. Get years with payment amounts exceeding $1,000,000
+SELECT YEAR(paymentDate) AS year, SUM(amount) AS total_payment 
+FROM payments GROUP BY year HAVING total_payment > 1000000;
+
+-- 43. Get years with average order value above $1,000
+SELECT YEAR(o.orderDate) AS year, AVG(od.quantityOrdered * od.priceEach) AS avg_order_value 
+FROM orders o INNER JOIN orderdetails od ON o.orderNumber = od.orderNumber GROUP BY year 
+HAVING avg_order_value > 1000;
+
+-- 44. Get product lines with total sales above $200,000
+SELECT p.productLine, SUM(od.quantityOrdered * od.priceEach) AS total_sales 
+FROM products p INNER JOIN orderdetails od ON p.productCode = od.productCode GROUP BY p.productLine 
+HAVING total_sales > 200000;
+
+-- 45. Get countries with total sales above $500,000
+SELECT c.country, SUM(od.quantityOrdered * od.priceEach) AS total_sales 
+FROM customers c INNER JOIN orders o ON c.customerNumber = o.customerNumber 
+INNER JOIN orderdetails od ON o.orderNumber = od.orderNumber GROUP BY c.country 
+HAVING total_sales > 500000;
+
+-- 46. Get office cities with sales above $300,000
+SELECT o.city, SUM(od.quantityOrdered * od.priceEach) AS total_sales 
+FROM offices o INNER JOIN employees e ON o.officeCode = e.officeCode 
+INNER JOIN customers c ON e.employeeNumber = c.salesRepEmployeeNumber 
+INNER JOIN orders ord ON c.customerNumber = ord.customerNumber 
+INNER JOIN orderdetails od ON ord.orderNumber = od.orderNumber GROUP BY o.city 
+HAVING total_sales > 300000;
+
+-- 47. Get all customers with their order numbers, even if they have no orders
+SELECT c.customerName, o.orderNumber FROM customers c LEFT JOIN orders o ON c.customerNumber = o.customerNumber;
+
+-- 48. Get all products with their order quantities, even if not ordered
+SELECT p.productName, SUM(od.quantityOrdered) AS total_quantity 
+FROM products p LEFT JOIN orderdetails od ON p.productCode = od.productCode GROUP BY p.productName;
+
+-- 49. Get all employees with customer names they handle, even if they have none
+SELECT e.firstName, e.lastName, c.customerName 
+FROM employees e LEFT JOIN customers c ON e.employeeNumber = c.salesRepEmployeeNumber;
+
+-- 50. Get all customers with their sales rep names, even if they have no rep
+SELECT c.customerName, e.firstName, e.lastName 
+FROM customers c LEFT JOIN employees e ON c.salesRepEmployeeNumber = e.employeeNumber;
+
+-- 51. Get all customers with their order statuses, even if they have no orders
+SELECT c.customerName, o.status FROM customers c LEFT JOIN orders o ON c.customerNumber = o.customerNumber;
+
+-- 52. Get products ordered by customers in the USA
+SELECT p.productCode, p.productName 
+FROM products p WHERE p.productCode IN (
+    SELECT od.productCode FROM orderdetails od 
+    INNER JOIN orders o ON od.orderNumber = o.orderNumber 
+    INNER JOIN customers c ON o.customerNumber = c.customerNumber WHERE c.country = 'USA'
+);
+
+-- 53. Get employees who report to someone named 'Murphy'
+SELECT employeeNumber, firstName, lastName 
+FROM employees WHERE reportsTo IN (
+    SELECT employeeNumber FROM employees WHERE lastName = 'Murphy'
+);
+
+-- 54. Get orders that include motorcycles
+SELECT orderNumber FROM orders o WHERE orderNumber IN (
+    SELECT od.orderNumber FROM orderdetails od 
+    INNER JOIN products p ON od.productCode = p.productCode WHERE p.productLine = 'Motorcycles'
+);
+
+-- 55. Get names of customers who placed orders
+SELECT customerName FROM customers WHERE customerNumber IN (
+    SELECT customerNumber FROM orders
+);
+
+-- 56. Get office cities and countries where customers are present
+SELECT city, country FROM offices WHERE country IN (
+    SELECT country FROM customers
+);
+
+-- 57. Get products with orders exceeding 50 units
+SELECT p.productCode, p.productName 
+FROM products p WHERE p.productCode IN (
+    SELECT od.productCode FROM orderdetails od WHERE od.quantityOrdered > 50
+);
+
+-- 58. Get employees who have customers in their office's country
+SELECT e.employeeNumber, e.firstName, e.lastName 
+FROM employees e WHERE EXISTS (
+    SELECT 1 FROM customers c WHERE c.country = (
+        SELECT country FROM offices o WHERE o.officeCode = e.officeCode
+    )
+);
+
+-- 59. Get orders shipped to France
+SELECT orderNumber FROM orders WHERE customerNumber IN (
+    SELECT customerNumber FROM customers WHERE country = 'France'
+);
+
+-- 60. Get customers who ordered in 2003
+SELECT customerName FROM customers WHERE customerNumber IN (
+    SELECT customerNumber FROM orders WHERE orderDate BETWEEN '2003-01-01' AND '2003-12-31'
+);
+
+-- 61. Get orders with status 'Shipped'
+SELECT orderNumber FROM orders WHERE status = 'Shipped';
+
+-- 62. Get customers with credit limits over 50,000
+SELECT customerName FROM customers WHERE creditLimit > 50000;
+
+-- 63. Get employees in San Francisco
+SELECT employeeNumber, firstName, lastName 
+FROM employees WHERE officeCode IN (
+    SELECT officeCode FROM offices WHERE city = 'San Francisco'
+);
+
+-- 64. Get products from vendor 'Autoart Studio Design'
+SELECT productCode, productName FROM products WHERE productVendor = 'Autoart Studio Design';
+
+-- 65. Get orders with total price over 1000
+SELECT orderNumber FROM orderdetails od GROUP BY orderNumber 
+HAVING SUM(quantityOrdered * priceEach) > 1000;
+
+-- 66. Get products ordered by customers from Spain
+SELECT p.productCode, p.productName 
+FROM products p WHERE p.productCode IN (
+    SELECT od.productCode FROM orderdetails od 
+    INNER JOIN orders o ON od.orderNumber = o.orderNumber 
+    INNER JOIN customers c ON o.customerNumber = c.customerNumber WHERE c.country = 'Spain'
+);
+
+-- 67. Get office cities and countries where customers placed orders
+SELECT o.city, o.country 
+FROM offices o WHERE o.city IN (
+    SELECT c.city FROM customers c INNER JOIN orders ord ON c.customerNumber = ord.customerNumber
+);
+
+-- 68. Get employees with customers in their office's country
+SELECT e.employeeNumber, e.lastName, e.firstName 
+FROM employees e WHERE EXISTS (
+    SELECT 1 FROM customers c WHERE c.country = (
+        SELECT country FROM offices o WHERE o.officeCode = e.officeCode
+    )
+);
+
+-- 69. Get products priced above the average MSRP
+SELECT productCode, productName FROM products p 
+WHERE MSRP > (SELECT AVG(MSRP) FROM products);
+
+-- 70. Get customers with credit limits above their country’s average
+SELECT customerName FROM customers c 
+WHERE creditLimit > (SELECT AVG(creditLimit) FROM customers WHERE country = c.country);
