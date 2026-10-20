@@ -1,0 +1,1440 @@
+
+# CD🏥 MOSAIC AI: READMISSION RISK EXPLORER - HACKATHON CHAMPION EDITION
+
+import gradio as gr
+import pandas as pd
+import json
+import plotly.graph_objects as go
+import plotly.express as px
+from datetime import datetime
+from langchain_databricks import ChatDatabricks
+from langchain_core.prompts import ChatPromptTemplate
+
+
+# 1. CONFIGURATION & DATA LOADING
+
+
+SELECTED_ENDPOINT = "databricks-meta-llama-3-3-70b-instruct"
+# SELECTED_ENDPOINT = "databricks-claude-sonnet-4"
+FILE_PATH = "agent_input_final.csv"
+
+# Load the patient data
+try:
+    df_agent = pd.read_csv(FILE_PATH)
+    df_agent['Patient_ID'] = range(len(df_agent))
+    print(f"✅ Successfully loaded {len(df_agent)} patient records")
+except Exception as e:
+    print(f"❌ Error loading data: {e}")
+    df_agent = pd.DataFrame()
+
+# Load model metrics from JSON (created by Model.py)
+metrics_file = "model_metrics.json"
+try:
+    with open(metrics_file, 'r') as f:
+        model_metrics = json.load(f)
+    accuracy_display = f"{model_metrics['accuracy']}%"
+    recall_display = f"{model_metrics['recall']}%"
+    f1_display = f"{model_metrics['f1']}%"
+    print(f"✅ Loaded model metrics: Accuracy={accuracy_display}, Recall={recall_display}")
+except Exception as e:
+    print(f"⚠️ Could not load metrics file, using defaults: {e}")
+    accuracy_display = "N/A"
+    recall_display = "N/A"
+    f1_display = "N/A"
+
+# Calculate max patient ID based on actual data
+max_patient_id = len(df_agent) - 1 if len(df_agent) > 0 else 0
+
+
+# 2. FUTURISTIC MEDICAL DASHBOARD CSS
+
+# Dark theme with cyan/blue medical accents, glassmorphism, and smooth animations
+
+custom_css = """
+/* ============================================
+   GLOBAL THEME: Medical Command Center
+   ============================================ */
+:root {
+    --primary-bg: #0a0e1a;
+    --secondary-bg: #111827;
+    --card-bg: rgba(17, 24, 39, 0.8);
+    --accent-primary: #06b6d4;
+    --accent-secondary: #3b82f6;
+    --accent-danger: #ef4444;
+    --accent-warning: #f59e0b;
+    --accent-success: #10b981;
+    --text-primary: #f9fafb;
+    --text-secondary: #9ca3af;
+    --border-color: rgba(6, 182, 212, 0.3);
+}
+
+/* Main Container - Dark Medical Theme */
+.gradio-container {
+    background: linear-gradient(135deg, #0a0e1a 0%, #1e293b 50%, #0f172a 100%) !important;
+    background-attachment: fixed;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: var(--text-primary);
+}
+
+/* Animated Background Pattern */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        radial-gradient(circle at 20% 50%, rgba(6, 182, 212, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.05) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* ============================================
+   HEADER SECTION
+   ============================================ */
+.dashboard-header {
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%);
+    border: 2px solid var(--border-color);
+    border-radius: 20px;
+    padding: 30px;
+    margin-bottom: 30px;
+    text-align: center;
+    backdrop-filter: blur(20px);
+    box-shadow: 
+        0 0 40px rgba(6, 182, 212, 0.2),
+        inset 0 0 60px rgba(6, 182, 212, 0.05);
+    position: relative;
+    overflow: hidden;
+}
+
+.dashboard-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent 30%, rgba(6, 182, 212, 0.1) 50%, transparent 70%);
+    animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+    100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+}
+
+.header-title {
+    font-size: 2.5em;
+    font-weight: 800;
+    background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0;
+    position: relative;
+    z-index: 1;
+    text-shadow: 0 0 30px rgba(6, 182, 212, 0.3);
+}
+
+.header-subtitle {
+    color: var(--text-secondary);
+    font-size: 1.1em;
+    margin-top: 10px;
+    position: relative;
+    z-index: 1;
+}
+
+.header-stats {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin-top: 20px;
+    position: relative;
+    z-index: 1;
+}
+
+.header-stat-item {
+    text-align: center;
+}
+
+.header-stat-value {
+    font-size: 2em;
+    font-weight: 700;
+    color: var(--accent-primary);
+}
+
+.header-stat-label {
+    font-size: 0.85em;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* ============================================
+   CONTROL PANEL
+   ============================================ */
+.control-panel {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 15px;
+    padding: 25px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.control-title {
+    color: var(--accent-primary);
+    font-size: 1.3em;
+    font-weight: 700;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Input Fields */
+input[type="number"], .gr-input input {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 2px solid rgba(6, 182, 212, 0.3) !important;
+    border-radius: 10px !important;
+    color: var(--text-primary) !important;
+    padding: 15px !important;
+    font-size: 1.1em !important;
+    transition: all 0.3s ease !important;
+}
+
+input[type="number"]:focus, .gr-input input:focus {
+    border-color: var(--accent-primary) !important;
+    box-shadow: 0 0 20px rgba(6, 182, 212, 0.3) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Analyze Button */
+.btn-analyze {
+    background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%) !important;
+    border: none !important;
+    border-radius: 12px !important;
+    padding: 18px 40px !important;
+    font-size: 1.2em !important;
+    font-weight: 700 !important;
+    color: white !important;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 8px 25px rgba(6, 182, 212, 0.4) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-analyze:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 35px rgba(6, 182, 212, 0.6) !important;
+}
+
+.btn-analyze::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.btn-analyze:active::before {
+    width: 300px;
+    height: 300px;
+}
+
+/* ============================================
+   RISK ALERT CARDS
+   ============================================ */
+.risk-alert {
+    border-radius: 15px;
+    padding: 25px;
+    margin: 20px 0;
+    border-left: 6px solid;
+    backdrop-filter: blur(10px);
+    animation: slideInLeft 0.6s ease-out;
+    position: relative;
+    overflow: hidden;
+}
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.risk-alert::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+    animation: scan 3s infinite;
+}
+
+@keyframes scan {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.risk-high {
+    background: rgba(239, 68, 68, 0.15);
+    border-left-color: var(--accent-danger);
+    box-shadow: 0 0 30px rgba(239, 68, 68, 0.2);
+}
+
+.risk-medium {
+    background: rgba(245, 158, 11, 0.15);
+    border-left-color: var(--accent-warning);
+    box-shadow: 0 0 30px rgba(245, 158, 11, 0.2);
+}
+
+.risk-low {
+    background: rgba(16, 185, 129, 0.15);
+    border-left-color: var(--accent-success);
+    box-shadow: 0 0 30px rgba(16, 185, 129, 0.2);
+}
+
+.risk-badge {
+    display: inline-block;
+    padding: 10px 25px;
+    border-radius: 30px;
+    font-weight: 800;
+    font-size: 1.2em;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    animation: pulse 2s ease-in-out infinite;
+    margin: 15px 0;
+}
+
+@keyframes pulse {
+    0%, 100% { 
+        transform: scale(1);
+        box-shadow: 0 0 0 0 currentColor;
+    }
+    50% { 
+        transform: scale(1.05);
+        box-shadow: 0 0 20px 5px rgba(255, 255, 255, 0.2);
+    }
+}
+
+.badge-high {
+    background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+    color: white;
+    box-shadow: 0 8px 20px rgba(220, 38, 38, 0.4);
+}
+
+.badge-medium {
+    background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+    color: #1f2937;
+    box-shadow: 0 8px 20px rgba(217, 119, 6, 0.4);
+}
+
+.badge-low {
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    color: white;
+    box-shadow: 0 8px 20px rgba(5, 150, 105, 0.4);
+}
+
+/* ============================================
+   METRIC CARDS GRID
+   ============================================ */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin: 25px 0;
+}
+
+.metric-card {
+    background: rgba(17, 24, 39, 0.6);
+    border: 1px solid rgba(6, 182, 212, 0.2);
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    position: relative;
+    overflow: hidden;
+}
+
+.metric-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.metric-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--accent-primary);
+    box-shadow: 0 12px 30px rgba(6, 182, 212, 0.3);
+}
+
+.metric-card:hover::after {
+    transform: scaleX(1);
+}
+
+.metric-label {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.metric-value {
+    font-size: 2.2em;
+    font-weight: 800;
+    color: var(--accent-primary);
+    text-shadow: 0 0 20px rgba(6, 182, 212, 0.5);
+}
+
+.metric-subtitle {
+    font-size: 0.85em;
+    color: var(--text-secondary);
+    margin-top: 8px;
+}
+
+/* ============================================
+   DATA VISUALIZATION SECTION
+   ============================================ */
+.viz-container {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 15px;
+    padding: 25px;
+    margin: 20px 0;
+    backdrop-filter: blur(10px);
+}
+
+.viz-title {
+    color: var(--accent-primary);
+    font-size: 1.3em;
+    font-weight: 700;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Progress Bars for Feature Importance */
+.progress-bar-container {
+    margin: 15px 0;
+}
+
+.progress-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    color: var(--text-secondary);
+    font-size: 0.95em;
+}
+
+.progress-bar-bg {
+    height: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+    border-radius: 6px;
+    transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 15px rgba(6, 182, 212, 0.6);
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-bar-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    animation: shimmerBar 2s infinite;
+}
+
+@keyframes shimmerBar {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+/* ============================================
+   AI ASSESSMENT SECTION
+   ============================================ */
+.ai-section {
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
+    border: 2px solid rgba(6, 182, 212, 0.3);
+    border-radius: 15px;
+    padding: 25px;
+    margin: 20px 0;
+    backdrop-filter: blur(10px);
+}
+
+.ai-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(6, 182, 212, 0.2);
+}
+
+.ai-icon {
+    font-size: 2em;
+    animation: rotate 3s linear infinite;
+}
+
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.ai-title {
+    color: var(--accent-primary);
+    font-size: 1.4em;
+    font-weight: 700;
+    margin: 0;
+}
+
+.ai-content {
+    color: var(--text-primary);
+    line-height: 1.8;
+    font-size: 1.05em;
+}
+
+.ai-content h2 {
+    color: var(--accent-primary);
+    font-size: 1.3em;
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+.ai-content ul, .ai-content ol {
+    margin-left: 20px;
+    margin-bottom: 15px;
+}
+
+.ai-content li {
+    margin-bottom: 8px;
+    color: var(--text-secondary);
+}
+
+.ai-content strong {
+    color: var(--text-primary);
+    font-weight: 700;
+}
+
+/* ============================================
+   RECOMMENDATIONS PANEL
+   ============================================ */
+.recommendations-panel {
+    background: rgba(99, 102, 241, 0.1);
+    border: 2px solid rgba(99, 102, 241, 0.3);
+    border-radius: 15px;
+    padding: 25px;
+    margin-top: 25px;
+}
+
+.rec-title {
+    color: #818cf8;
+    font-size: 1.4em;
+    font-weight: 700;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.rec-item {
+    background: rgba(255, 255, 255, 0.03);
+    border-left: 4px solid #6366f1;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    transition: all 0.3s ease;
+}
+
+.rec-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-left-color: #818cf8;
+    transform: translateX(5px);
+}
+
+/* ============================================
+   TIMELINE VISUALIZATION
+   ============================================ */
+.timeline-container {
+    position: relative;
+    padding-left: 40px;
+    margin-top: 20px;
+}
+
+.timeline-item {
+    position: relative;
+    padding-bottom: 35px;
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -32px;
+    top: 8px;
+    width: 16px;
+    height: 16px;
+    background: var(--accent-primary);
+    border-radius: 50%;
+    border: 3px solid var(--secondary-bg);
+    box-shadow: 0 0 15px rgba(6, 182, 212, 0.8);
+    z-index: 2;
+}
+
+.timeline-item::after {
+    content: '';
+    position: absolute;
+    left: -25px;
+    top: 24px;
+    width: 2px;
+    height: calc(100% - 16px);
+    background: linear-gradient(180deg, var(--accent-primary), transparent);
+    z-index: 1;
+}
+
+.timeline-item:last-child::after {
+    display: none;
+}
+
+.timeline-content {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 15px;
+    border-left: 3px solid var(--accent-primary);
+}
+
+.timeline-time {
+    color: var(--accent-primary);
+    font-weight: 700;
+    font-size: 0.9em;
+    margin-bottom: 8px;
+}
+
+.timeline-action {
+    color: var(--text-primary);
+    font-size: 1.05em;
+}
+
+/* ============================================
+   LOADING STATES
+   ============================================ */
+.loading-spinner {
+    display: inline-block;
+    width: 50px;
+    height: 50px;
+    border: 5px solid rgba(6, 182, 212, 0.2);
+    border-top-color: var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 30px auto;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+@media (max-width: 768px) {
+    .header-title {
+        font-size: 1.8em;
+    }
+    
+    .metrics-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .header-stats {
+        flex-direction: column;
+        gap: 15px;
+    }
+}
+
+/* ============================================
+   ACCESSIBILITY & POLISH
+   ============================================ */
+::-webkit-scrollbar {
+    width: 12px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--secondary-bg);
+    border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #0891b2, #2563eb);
+}
+
+/* Smooth Transitions for All Elements */
+* {
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Focus States for Accessibility */
+button:focus, input:focus {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+}
+"""
+
+
+# 3. ENHANCED DATA RETRIEVAL FUNCTION
+
+
+def get_patient_data(patient_id):
+    """
+    Retrieves comprehensive patient data including all clinical metrics
+    and risk assessment information.
+    """
+    try:
+        patient = df_agent[df_agent['Patient_ID'] == int(patient_id)].iloc[0]
+        
+        # Calculate risk level
+        is_high_risk = patient['predicted_risk_label'] == 1
+        risk_prob = patient['risk_probability']
+        
+        # Determine risk category with more granularity
+        if risk_prob >= 0.70:
+            risk_level = "HIGH"
+            risk_icon = "🚨"
+            risk_class = "risk-high"
+            badge_class = "badge-high"
+        elif risk_prob >= 0.40:
+            risk_level = "MEDIUM"
+            risk_icon = "⚠️"
+            risk_class = "risk-medium"
+            badge_class = "badge-medium"
+        else:
+            risk_level = "LOW"
+            risk_icon = "✅"
+            risk_class = "risk-low"
+            badge_class = "badge-low"
+        
+        # Extract all clinical data
+        patient_data = {
+            "patient_id": int(patient_id),
+            "risk_level": risk_level,
+            "risk_icon": risk_icon,
+            "risk_class": risk_class,
+            "badge_class": badge_class,
+            "risk_probability": risk_prob,
+            "lace_score": int(patient['LACE_Score']),
+            "time_in_hospital": int(patient['time_in_hospital']),
+            "num_emergency": int(patient['number_emergency']),
+            "num_diagnoses": int(patient['number_diagnoses']),
+            "num_medications": int(patient['num_medications']),
+            "num_lab_procedures": int(patient['num_lab_procedures']),
+            "num_procedures": int(patient['num_procedures']),
+            "insulin_status": int(patient['insulin_enc']),
+            "metformin_status": int(patient['metformin_enc']),
+            "meds_changed": "Yes" if patient['change_enc'] == 1 else "No",
+            "a1c_result": int(patient['A1Cresult_enc']),
+            "actual_readmitted": bool(patient.get('actual_target', 0))
+        }
+        
+        return patient_data
+        
+    except Exception as e:
+        return {"error": str(e)}
+
+
+# 4. INTERACTIVE PLOTLY VISUALIZATIONS
+
+
+def create_risk_gauge(risk_probability):
+    """Creates an animated gauge chart showing risk probability"""
+    
+    fig = go.Figure(go.Indicator(
+        mode = "gauge+number+delta",
+        value = risk_probability * 100,
+        domain = {'x': [0, 1], 'y': [0, 1]},
+        title = {'text': "Readmission Risk", 'font': {'size': 20, 'color': '#9ca3af'}},
+        delta = {'reference': 50, 'increasing': {'color': "#ef4444"}, 'decreasing': {'color': "#10b981"}},
+        number = {'suffix': "%", 'font': {'size': 40, 'color': '#f9fafb'}},
+        gauge = {
+            'axis': {'range': [None, 100], 'tickwidth': 2, 'tickcolor': "#06b6d4"},
+            'bar': {'color': "#06b6d4", 'thickness': 0.75},
+            'bgcolor': "rgba(17, 24, 39, 0.3)",
+            'borderwidth': 2,
+            'bordercolor': "rgba(6, 182, 212, 0.3)",
+            'steps': [
+                {'range': [0, 40], 'color': 'rgba(16, 185, 129, 0.3)'},
+                {'range': [40, 70], 'color': 'rgba(245, 158, 11, 0.3)'},
+                {'range': [70, 100], 'color': 'rgba(239, 68, 68, 0.3)'}
+            ],
+            'threshold': {
+                'line': {'color': "#ef4444", 'width': 4},
+                'thickness': 0.75,
+                'value': 70
+            }
+        }
+    ))
+    
+    fig.update_layout(
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font = {'color': "#f9fafb", 'family': "Inter"},
+        height=350,
+        margin=dict(l=20, r=20, t=50, b=20)
+    )
+    
+    return fig
+
+def create_feature_importance_chart(patient_data):
+    """Creates an interactive bar chart showing feature importance"""
+    
+    # Calculate relative importance based on patient's specific values
+    features = {
+        'LACE Score': (patient_data['lace_score'] / 19) * 100,
+        'Emergency Visits': min((patient_data['num_emergency'] / 4) * 100, 100),
+        'Hospital Days': min((patient_data['time_in_hospital'] / 10) * 100, 100),
+        'Medications': min((patient_data['num_medications'] / 30) * 100, 100),
+        'Diagnoses': min((patient_data['num_diagnoses'] / 10) * 100, 100),
+        'Lab Procedures': min((patient_data['num_lab_procedures'] / 50) * 100, 100)
+    }
+    
+    # Sort by importance
+    sorted_features = dict(sorted(features.items(), key=lambda x: x[1], reverse=True))
+    
+    # Create color gradient based on importance
+    colors = ['#06b6d4' if v > 60 else '#3b82f6' if v > 30 else '#6366f1' for v in sorted_features.values()]
+    
+    fig = go.Figure(data=[
+        go.Bar(
+            y=list(sorted_features.keys()),
+            x=list(sorted_features.values()),
+            orientation='h',
+            marker=dict(
+                color=colors,
+                line=dict(color='rgba(6, 182, 212, 0.5)', width=2)
+            ),
+            text=[f"{v:.1f}%" for v in sorted_features.values()],
+            textposition='outside',
+            hovertemplate='<b>%{y}</b><br>Impact: %{x:.1f}%<extra></extra>'
+        )
+    ])
+    
+    fig.update_layout(
+        title={
+            'text': "Risk Factor Contribution Analysis",
+            'font': {'size': 18, 'color': '#06b6d4'},
+            'x': 0.5,
+            'xanchor': 'center'
+        },
+        xaxis_title="Relative Impact (%)",
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font={'color': '#f9fafb', 'family': 'Inter'},
+        height=400,
+        margin=dict(l=20, r=20, t=50, b=50),
+        xaxis=dict(
+            gridcolor='rgba(6, 182, 212, 0.1)',
+            showgrid=True,
+            range=[0, 110]
+        ),
+        yaxis=dict(
+            gridcolor='rgba(6, 182, 212, 0.1)'
+        ),
+        hoverlabel=dict(
+            bgcolor='rgba(17, 24, 39, 0.95)',
+            font_size=13,
+            font_family="Inter"
+        )
+    )
+    
+    return fig
+
+def create_lace_breakdown_chart(patient_data):
+    """Creates a stacked bar showing LACE score components"""
+    
+    l_score = patient_data['time_in_hospital']
+    a_score = 3 if patient_data.get('admission_type', 1) in [1, 2, 7] else 0
+    c_score = min(patient_data['num_diagnoses'], 5)
+    e_score = min(patient_data['num_emergency'], 4)
+    
+    fig = go.Figure(data=[
+        go.Bar(name='Length of Stay', x=['LACE Components'], y=[l_score], 
+               marker_color='#06b6d4', text=[f'L: {l_score}'], textposition='inside'),
+        go.Bar(name='Acuity', x=['LACE Components'], y=[a_score], 
+               marker_color='#3b82f6', text=[f'A: {a_score}'], textposition='inside'),
+        go.Bar(name='Comorbidity', x=['LACE Components'], y=[c_score], 
+               marker_color='#8b5cf6', text=[f'C: {c_score}'], textposition='inside'),
+        go.Bar(name='Emergency', x=['LACE Components'], y=[e_score], 
+               marker_color='#a855f7', text=[f'E: {e_score}'], textposition='inside')
+    ])
+    
+    fig.update_layout(
+        barmode='stack',
+        title={
+            'text': f"LACE Score Breakdown (Total: {patient_data['lace_score']})",
+            'font': {'size': 18, 'color': '#06b6d4'},
+            'x': 0.5,
+            'xanchor': 'center'
+        },
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font={'color': '#f9fafb', 'family': 'Inter'},
+        height=300,
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="center",
+            x=0.5
+        ),
+        yaxis=dict(
+            title="Score",
+            gridcolor='rgba(6, 182, 212, 0.1)',
+            range=[0, 19]
+        )
+    )
+    
+    return fig
+
+
+# 5. MAIN ANALYSIS FUNCTION WITH MOSAIC AI
+
+
+def analyze_patient_comprehensive(patient_id):
+    """
+    Comprehensive patient risk analysis combining XGBoost predictions
+    with Mosaic AI clinical reasoning and interactive visualizations.
+    """
+    
+    try:
+        # Get patient data
+        patient = get_patient_data(patient_id)
+        
+        if "error" in patient:
+            error_html = f"""
+            <div class="risk-alert risk-high">
+                <h2 style="color: #ef4444; margin: 0;">⚠️ Error Loading Patient Data</h2>
+                <p style="color: #f9fafb; margin-top: 10px;">
+                    {patient['error']}
+                </p>
+                <p style="color: #9ca3af; margin-top: 10px; font-size: 0.9em;">
+                    Please verify the Patient ID and try again.
+                </p>
+            </div>
+            """
+            return error_html, None, None, None, ""
+        
+        # Generate the main risk assessment HTML
+        risk_html = generate_risk_assessment_html(patient)
+        
+        # Create Plotly visualizations
+        gauge_chart = create_risk_gauge(patient['risk_probability'])
+        feature_chart = create_feature_importance_chart(patient)
+        lace_chart = create_lace_breakdown_chart(patient)
+        
+        # Call Mosaic AI for clinical assessment
+        ai_assessment = generate_ai_clinical_assessment(patient)
+        
+        return risk_html, gauge_chart, feature_chart, lace_chart, ai_assessment
+        
+    except Exception as e:
+        error_html = f"""
+        <div class="risk-alert risk-high">
+            <h2 style="color: #ef4444;">🚨 System Error</h2>
+            <p style="color: #f9fafb; margin-top: 10px;">
+                An unexpected error occurred: {str(e)}
+            </p>
+        </div>
+        """
+        return error_html, None, None, None, f"Error: {str(e)}"
+
+
+# 6. HTML GENERATION FOR RISK ASSESSMENT
+
+
+def generate_risk_assessment_html(patient):
+    """Generates the beautiful HTML display for patient risk assessment"""
+    
+    timestamp = datetime.now().strftime("%B %d, %Y at %I:%M %p")
+    
+    html = f"""
+    <div style="padding: 15px;">
+        
+        <!-- Risk Alert Banner -->
+        <div class="risk-alert {patient['risk_class']}">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 250px;">
+                    <h2 style="margin: 0 0 15px 0; font-size: 1.6em; display: flex; align-items: center; gap: 12px;">
+                        <span style="font-size: 1.8em;">{patient['risk_icon']}</span>
+                        RISK ASSESSMENT STATUS
+                    </h2>
+                    <div class="risk-badge {patient['badge_class']}">
+                        {patient['risk_level']} RISK PATIENT
+                    </div>
+                </div>
+                <div style="text-align: right; flex: 1; min-width: 200px;">
+                    <div style="font-size: 0.85em; color: #9ca3af; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;">Patient Record</div>
+                    <div style="font-size: 2.5em; font-weight: 800; color: #06b6d4; text-shadow: 0 0 20px rgba(6, 182, 212, 0.5);">#{patient['patient_id']}</div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                <div style="font-size: 0.9em; color: #9ca3af;">
+                    <strong style="color: #f9fafb;">Analysis Generated:</strong> {timestamp}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Key Metrics Grid -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-label">📊 Readmission Risk</div>
+                <div class="metric-value">{patient['risk_probability']*100:.1f}%</div>
+                <div class="metric-subtitle">30-Day Probability</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-label">🏥 LACE Score</div>
+                <div class="metric-value">{patient['lace_score']}</div>
+                <div class="metric-subtitle">Out of 19 ({"High Risk" if patient['lace_score'] >= 10 else "Moderate Risk"})</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-label">🚑 Emergency Visits</div>
+                <div class="metric-value">{patient['num_emergency']}</div>
+                <div class="metric-subtitle">Past 6 Months</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-label">⏱️ Hospital Days</div>
+                <div class="metric-value">{patient['time_in_hospital']}</div>
+                <div class="metric-subtitle">Current Admission</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-label">💊 Medications</div>
+                <div class="metric-value">{patient['num_medications']}</div>
+                <div class="metric-subtitle">Active Prescriptions</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-label">📋 Diagnoses</div>
+                <div class="metric-value">{patient['num_diagnoses']}</div>
+                <div class="metric-subtitle">Total Conditions</div>
+            </div>
+        </div>
+        
+        <!-- Clinical Details Section -->
+        <div class="viz-container">
+            <div class="viz-title">
+                <span>🔬</span> Clinical Data Summary
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                <div style="background: rgba(255, 255, 255, 0.03); padding: 15px; border-radius: 10px; border-left: 3px solid #06b6d4;">
+                    <div style="color: #9ca3af; font-size: 0.85em; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">Laboratory Work</div>
+                    <div style="color: #f9fafb; font-size: 1.1em;"><strong>{patient['num_lab_procedures']}</strong> Lab Procedures</div>
+                    <div style="color: #9ca3af; font-size: 0.85em; margin-top: 5px;">A1C Result Code: {patient['a1c_result']}</div>
+                </div>
+                
+                <div style="background: rgba(255, 255, 255, 0.03); padding: 15px; border-radius: 10px; border-left: 3px solid #3b82f6;">
+                    <div style="color: #9ca3af; font-size: 0.85em; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">Medication Status</div>
+                    <div style="color: #f9fafb; font-size: 1.1em;">Insulin: <strong>{"Active" if patient['insulin_status'] else "Not Prescribed"}</strong></div>
+                    <div style="color: #f9fafb; font-size: 1.1em;">Metformin: <strong>{"Active" if patient['metformin_status'] else "Not Prescribed"}</strong></div>
+                    <div style="color: #9ca3af; font-size: 0.85em; margin-top: 5px;">Recent Changes: <strong style="color: {'#ef4444' if patient['meds_changed'] == 'Yes' else '#10b981'};">{patient['meds_changed']}</strong></div>
+                </div>
+                
+                <div style="background: rgba(255, 255, 255, 0.03); padding: 15px; border-radius: 10px; border-left: 3px solid #8b5cf6;">
+                    <div style="color: #9ca3af; font-size: 0.85em; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">Procedures</div>
+                    <div style="color: #f9fafb; font-size: 1.1em;"><strong>{patient['num_procedures']}</strong> Total Procedures</div>
+                    <div style="color: #9ca3af; font-size: 0.85em; margin-top: 5px;">During Current Stay</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- XGBoost Model Output -->
+        <div class="viz-container">
+            <div class="viz-title">
+                <span>🤖</span> XGBoost Predictive Model Output
+            </div>
+            <div style="background: rgba(10, 14, 26, 0.6); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: 10px; padding: 20px; font-family: 'Courier New', monospace;">
+                <pre style="color: #06b6d4; font-size: 0.95em; line-height: 1.6; margin: 0; white-space: pre-wrap;">{{
+    "patient_id": {patient['patient_id']},
+    "predicted_risk_label": {1 if patient['risk_level'] == 'HIGH' else 0},
+    "risk_probability": {patient['risk_probability']:.4f},
+    "risk_category": "{patient['risk_level']}",
+    "lace_score": {patient['lace_score']},
+    "contributing_factors": {{
+        "emergency_visits": {patient['num_emergency']},
+        "hospital_length_of_stay": {patient['time_in_hospital']},
+        "total_diagnoses": {patient['num_diagnoses']},
+        "medication_count": {patient['num_medications']},
+        "medication_changes": "{patient['meds_changed']}"
+    }},
+    "model_confidence": "{("High" if abs(patient['risk_probability'] - 0.5) > 0.3 else "Medium")}"
+}}</pre>
+            </div>
+        </div>
+        
+    </div>
+    """
+    
+    return html
+
+
+# 7. MOSAIC AI CLINICAL ASSESSMENT GENERATION
+
+
+def generate_ai_clinical_assessment(patient):
+    """
+    Uses Mosaic AI (Llama 3.3) to generate intelligent clinical recommendations
+    based on the patient's risk profile and clinical data.
+    """
+    
+    try:
+        # Initialize the Mosaic AI model
+        chat_model = ChatDatabricks(endpoint=SELECTED_ENDPOINT)
+        
+        # Prepare patient context for the AI
+        patient_context = {
+            "risk_level": patient['risk_level'],
+            "risk_probability": f"{patient['risk_probability']*100:.1f}%",
+            "lace_score": patient['lace_score'],
+            "emergency_visits": patient['num_emergency'],
+            "hospital_days": patient['time_in_hospital'],
+            "diagnoses_count": patient['num_diagnoses'],
+            "medications_count": patient['num_medications'],
+            "medication_changes": patient['meds_changed'],
+            "insulin_prescribed": "Yes" if patient['insulin_status'] else "No",
+            "metformin_prescribed": "Yes" if patient['metformin_status'] else "No",
+            "lab_procedures": patient['num_lab_procedures']
+        }
+        
+        # Create the prompt template
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", """You are a Senior Clinical Case Manager and Chief Medical Officer with expertise in hospital readmission prevention and discharge planning. 
+            
+Your role is to analyze patient risk data and provide actionable clinical recommendations for care teams.
+
+CRITICAL INSTRUCTIONS:
+1. Analyze the patient's risk factors holistically
+2. Provide specific, evidence-based recommendations
+3. Prioritize interventions based on risk level
+4. Consider both immediate and long-term care needs
+5. Format your response with clear sections using markdown
+
+RESPONSE STRUCTURE:
+## 📋 Clinical Risk Assessment
+[2-3 sentence summary of the patient's overall risk profile]
+
+## 🔍 Key Contributing Factors
+[Bullet points analyzing the most significant risk factors]
+* Factor 1 with clinical significance
+* Factor 2 with clinical significance
+* Factor 3 with clinical significance
+
+## 🎯 Recommended Interventions
+[Prioritized action items for the care team]
+1. **Immediate Actions** (Within 24-48 hours)
+   - Specific intervention
+   - Specific intervention
+2. **Short-term Follow-up** (Within 1-2 weeks)
+   - Specific intervention
+   - Specific intervention
+3. **Long-term Care Plan** (Ongoing)
+   - Specific intervention
+   - Specific intervention
+
+## 💊 Medication Management Considerations
+[Specific guidance on medication review, adherence, and monitoring]
+
+## 📞 Discharge Planning Recommendations
+[Specific recommendations for safe discharge and transition of care]
+
+TONE: Professional, direct, evidence-based. Use medical terminology appropriately but remain clear."""),
+            ("user", """Analyze this patient profile and provide comprehensive clinical recommendations:
+
+Patient Risk Profile:
+{patient_data}
+
+Focus on actionable interventions that will reduce readmission risk and improve patient outcomes.""")
+        ])
+        
+        # Generate the AI assessment
+        chain = prompt | chat_model
+        response = chain.invoke({"patient_data": json.dumps(patient_context, indent=2)})
+        
+        # Format the response with enhanced styling
+        ai_content = f"""
+        <div class="ai-section">
+            <div class="ai-header">
+                <div class="ai-icon">🤖</div>
+                <div>
+                    <h3 class="ai-title">Mosaic AI Clinical Assessment</h3>
+                    <div style="color: #9ca3af; font-size: 0.9em;">Powered by Meta Llama 3.3 70B Instruct</div>
+                </div>
+            </div>
+            <div class="ai-content">
+                {response.content}
+            </div>
+        </div>
+        
+        <div class="recommendations-panel">
+            <div class="rec-title">
+                <span>⏱️</span> Suggested Action Timeline
+            </div>
+            <div class="timeline-container">
+                {generate_action_timeline(patient)}
+            </div>
+        </div>
+        """
+        
+        return ai_content
+        
+    except Exception as e:
+        return f"""
+        <div class="ai-section">
+            <div class="ai-header">
+                <div style="color: #ef4444; font-size: 1.8em;">⚠️</div>
+                <div>
+                    <h3 style="color: #ef4444; margin: 0;">AI Service Error</h3>
+                </div>
+            </div>
+            <div style="color: #f9fafb; padding: 20px;">
+                <p>Unable to generate AI clinical assessment at this time.</p>
+                <p style="color: #9ca3af; font-size: 0.9em; margin-top: 10px;">Error: {str(e)}</p>
+                <p style="color: #9ca3af; font-size: 0.9em; margin-top: 10px;">Please verify that the Mosaic AI endpoint "{SELECTED_ENDPOINT}" is available in your workspace.</p>
+            </div>
+        </div>
+        """
+
+
+# 8. ACTION TIMELINE GENERATION
+
+
+def generate_action_timeline(patient):
+    """Generates a visual timeline of recommended actions based on risk level"""
+    
+    if patient['risk_level'] == "HIGH":
+        actions = [
+            ("Immediate", "Activate high-risk discharge protocol", "#ef4444"),
+            ("24 Hours", "First follow-up contact via phone call", "#f97316"),
+            ("48-72 Hours", "In-person clinic visit or home health assessment", "#fbbf24"),
+            ("Week 1", "Medication reconciliation and adherence check", "#facc15"),
+            ("Week 2", "Comprehensive care team review", "#a3e635"),
+            ("Week 4", "Re-assessment of risk factors and care plan adjustment", "#22c55e")
+        ]
+    elif patient['risk_level'] == "MEDIUM":
+        actions = [
+            ("24-48 Hours", "Standard discharge follow-up call", "#fbbf24"),
+            ("Week 1", "Primary care appointment scheduled", "#facc15"),
+            ("Week 2", "Case manager check-in call", "#a3e635"),
+            ("Month 1", "Care plan review and adjustment as needed", "#22c55e")
+        ]
+    else:
+        actions = [
+            ("Week 1", "Routine follow-up call to confirm understanding", "#a3e635"),
+            ("2 Weeks", "Primary care visit as scheduled", "#22c55e"),
+            ("Month 1", "Standard monitoring per care plan", "#10b981")
+        ]
+    
+    timeline_html = ""
+    for timeframe, action, color in actions:
+        timeline_html += f"""
+        <div class="timeline-item">
+            <div class="timeline-content" style="border-left-color: {color};">
+                <div class="timeline-time" style="color: {color};">{timeframe}</div>
+                <div class="timeline-action">{action}</div>
+            </div>
+        </div>
+        """
+    
+    return timeline_html
+
+
+# 9. HELPER FUNCTIONS
+
+
+def get_random_high_risk_patient():
+    """Finds a random high-risk patient for quick demo"""
+    try:
+        high_risk_patients = df_agent[df_agent['predicted_risk_label'] == 1]
+        if len(high_risk_patients) > 0:
+            return int(high_risk_patients.sample(1)['Patient_ID'].iloc[0])
+        else:
+            return 0
+    except:
+        return 0
+
+def get_random_low_risk_patient():
+    """Finds a random low-risk patient for comparison"""
+    try:
+        low_risk_patients = df_agent[df_agent['predicted_risk_label'] == 0]
+        if len(low_risk_patients) > 0:
+            return int(low_risk_patients.sample(1)['Patient_ID'].iloc[0])
+        else:
+            return 1
+    except:
+        return 1
+
+
+# 10. BUILD THE GRADIO INTERFACE
+
+
+with gr.Blocks(theme=gr.themes.Base(), css=custom_css, title="Mosaic AI Readmission Risk Explorer") as demo:
+    
+    # Main Header
+    gr.HTML(f"""
+    <div class="dashboard-header">
+        <h1 class="header-title">🏥 READMISSION RISK EXPLORER</h1>
+        <p class="header-subtitle">AI-Powered Clinical Decision Support System</p>
+        <div class="header-stats">
+            <div class="header-stat-item">
+                <div class="header-stat-value">{len(df_agent)}</div>
+                <div class="header-stat-label">Patients Analyzed</div>
+            </div>
+            <div class="header-stat-item">
+                <div class="header-stat-value">{len(df_agent[df_agent['predicted_risk_label'] == 1])}</div>
+                <div class="header-stat-label">High Risk Cases</div>
+            </div>
+            <div class="header-stat-item">
+                <div class="header-stat-value">" + recall_display + "</div>
+                <div class="header-stat-label">Model Recall</div>
+            </div>
+        </div>
+    </div>
+    """)
+    
+    # Control Panel
+    with gr.Row():
+        with gr.Column(scale=1):
+            gr.HTML("""
+            <div class="control-panel">
+                <div class="control-title">
+                    <span>📋</span> Patient Selection
+                </div>
+                <p style="color: #9ca3af; font-size: 0.95em; line-height: 1.6; margin-bottom: 20px;">
+                    Enter a Patient ID to generate comprehensive risk assessment and clinical recommendations.
+                </p>
+            </div>
+            """)
+            
+            patient_id_input = gr.Number(
+                label=f"Patient ID (0-{max_patient_id})",
+                value=get_random_high_risk_patient(),
+                precision=0,
+                minimum=0,
+                maximum=max_patient_id
+            )
+            
+            with gr.Row():
+                analyze_btn = gr.Button(
+                    "🔍 ANALYZE PATIENT",
+                    variant="primary",
+                    size="lg",
+                    elem_classes=["btn-analyze"]
+                )
+            
+            with gr.Row():
+                demo_high_btn = gr.Button("🚨 Load High-Risk Example", size="sm")
+                demo_low_btn = gr.Button("✅ Load Low-Risk Example", size="sm")
+            
+            gr.HTML("""
+            <div style="margin-top: 25px; padding: 20px; background: rgba(6, 182, 212, 0.1); border-radius: 12px; border: 1px solid rgba(6, 182, 212, 0.3);">
+                <div style="color: #06b6d4; font-weight: 700; margin-bottom: 10px; font-size: 1.1em;">ℹ️ System Information</div>
+                <div style="color: #9ca3af; font-size: 0.9em; line-height: 1.6;">
+                    <strong style="color: #f9fafb;">Model:</strong> XGBoost Classifier<br>
+                    <strong style="color: #f9fafb;">AI Engine:</strong> Meta Llama 3.3 70B<br>
+                    <strong style="color: #f9fafb;">Prediction Window:</strong> 30 Days<br>
+                    <strong style="color: #f9fafb;">Risk Factors:</strong> LACE + Clinical History
+                </div>
+            </div>
+            """)
+    
+    # Results Section
+    with gr.Column(scale=2):
+        # Risk Assessment Display
+        risk_output = gr.HTML(label="Patient Risk Assessment")
+        
+        # Interactive Visualizations Row
+        with gr.Row():
+            gauge_output = gr.Plot(label="Risk Probability Gauge")
+            lace_output = gr.Plot(label="LACE Score Breakdown")
+        
+        # Feature Importance Chart
+        feature_output = gr.Plot(label="Risk Factor Analysis")
+        
+        # AI Clinical Assessment
+        ai_output = gr.HTML(label="Mosaic AI Clinical Assessment")
+    
+    # Event Handlers
+    analyze_btn.click(
+        fn=analyze_patient_comprehensive,
+        inputs=[patient_id_input],
+        outputs=[risk_output, gauge_output, feature_output, lace_output, ai_output]
+    )
+    
+    demo_high_btn.click(
+        fn=lambda: get_random_high_risk_patient(),
+        inputs=[],
+        outputs=[patient_id_input]
+    )
+    
+    demo_low_btn.click(
+        fn=lambda: get_random_low_risk_patient(),
+        inputs=[],
+        outputs=[patient_id_input]
+    )
+
+
+# 11. LAUNCH THE APPLICATION
+
+
+print("=" * 70)
+print("🚀 LAUNCHING MOSAIC AI READMISSION RISK EXPLORER")
+print("=" * 70)
+print(f"✅ Loaded {len(df_agent)} patient records")
+print(f"✅ XGBoost model ready")
+print(f"✅ Mosaic AI endpoint: {SELECTED_ENDPOINT}")
+print(f"✅ Interactive visualizations enabled")
+print("=" * 70)
+
+demo.launch(share=True)

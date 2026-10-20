@@ -1,0 +1,117 @@
+PHASE 3: ADVANCED MODELING (v3.0 — LightGBM Native)
+======================================================================
+[1] Loaded 69,987 cleaned patient records × 70 columns
+[2] LACE Score: mean=8.9, median=9
+[3] Created 15 native categorical features
+[4] Feature matrix: 43 features
+[5] Split: Train=55,989 | Test=13,998
+    Class imbalance ratio: 12.48
+
+[6] Running Optuna hyperparameter tuning (50 trials)...
+    Best PR-AUC (CV): 0.1605
+    Best params:
+      n_estimators: 200
+      learning_rate: 0.0235
+      num_leaves: 84
+      max_depth: 4
+      min_child_samples: 80
+      subsample: 0.9648
+      colsample_bytree: 0.5843
+      reg_alpha: 0.0002
+      reg_lambda: 0.0160
+      scale_pos_weight: 2.1001
+      random_state: 42
+      n_jobs: -1
+      verbose: -1
+
+[7] Training final LightGBM model...
+    Model trained on 55,989 samples with 43 features
+
+[8] Sweeping thresholds for optimal F1.5-score (to strike precision/recall balance)...
+
+    Best F1.5 threshold: 0.165
+      Recall=0.533, Precision=0.141, F1.5=0.2876
+
+======================================================================
+FINAL RESULTS (threshold: 0.165)
+======================================================================
+  PR-AUC (main metric)    : 0.1535
+  ROC-AUC                 : 0.6825
+  F1.5-Score (Optimized)  : 0.2876
+  F2-Score                : 0.3428
+  F1-Score                : 0.2233
+  Recall (sensitivity)    : 53.3%
+  Precision               : 14.1%
+  Overall accuracy        : 72.5%
+
+  Confusion Matrix:
+    TN=9,599  FP=3,361
+    FN=485  TP=553
+
+  High-risk caught (TP)   : 553
+  High-risk missed (FN)   : 485
+  False alarms (FP)       : 3,361
+
+  Classification Report:
+              precision    recall  f1-score   support
+
+  No Readmit       0.95      0.74      0.83     12960
+Readmit <30d       0.14      0.53      0.22      1038
+
+    accuracy                           0.73     13998
+   macro avg       0.55      0.64      0.53     13998
+weighted avg       0.89      0.73      0.79     13998
+
+
+  Top 15 Features (by gain):
+    diag_1_group                        : 290.0000
+    diag_2_group                        : 252.0000
+    diag_3_group                        : 220.0000
+    num_lab_procedures                  : 194.0000
+    discharge_group                     : 182.0000
+    num_medications                     : 143.0000
+    number_inpatient                    : 141.0000
+    lab_intensity                       : 110.0000
+    age                                 : 94.0000
+    number_diagnoses                    : 90.0000
+    high_utilizer                       : 82.0000
+    time_in_hospital                    : 76.0000
+    LACE_Score                          : 65.0000
+    age_numeric                         : 65.0000
+    race                                : 58.0000
+
+[11] Computing SHAP values on test set...
+  Top 15 SHAP Features:
+    number_inpatient                    : 0.1858
+    discharge_group                     : 0.1590
+    diag_1_group                        : 0.0951
+    discharged_to_home                  : 0.0922
+    high_utilizer                       : 0.0694
+    num_lab_procedures                  : 0.0584
+    number_diagnoses                    : 0.0525
+    age_numeric                         : 0.0470
+    age                                 : 0.0435
+    has_prior_inpatient                 : 0.0428
+    diag_2_group                        : 0.0423
+    diag_3_group                        : 0.0389
+    race                                : 0.0246
+    time_in_hospital                    : 0.0237
+    num_medications                     : 0.0214
+
+[12] Saved 13,998 patient records to: agent_input_final.csv
+
+[13] LangChain/Databricks not available — Agent setup skipped (local dev)
+
+======================================================================
+PHASE 3 COMPLETE (v3.0 - LightGBM with F1.5 Optimization)
+======================================================================
+  Model         : LightGBM (Optuna-tuned, 43 features)
+  PR-AUC        : 0.1535
+  ROC-AUC       : 0.6825
+  F1.5-Score    : 0.2876
+  F1-Score      : 0.2233
+  Recall        : 53.3%
+  Precision     : 14.1%
+  Threshold     : 0.165
+  Patients      : 13,998 (3,914 high-risk)
+======================================================================

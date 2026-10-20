@@ -1,0 +1,130 @@
+A. Investment Amount Analysis Queries
+1.
+
+“Show the total IFC loan investment by region for the last 10 years.”
+
+2.
+
+“List the top 25 projects by Total IFC investment as approved.”
+
+3.
+
+“Compare Equity vs Loan investment across industries.”
+
+4.
+
+“Which countries received more than $100M IFC investment in any product line?”
+
+5.
+
+“Show the trend of IFC Approved investments year-over-year.”
+
+B. Country & Region Insights
+6.
+
+“What are the top performing regions by committed investment?”
+
+7.
+
+“List the countries with the highest number of Active projects.”
+
+8.
+
+“Show IFC investment split (Loan/Equity/Guarantee) for East Asia & Pacific.”
+
+9.
+
+“Which WB Country Codes have the highest disbursement delays between approval and signing date?”
+
+C. Timeline & Progress Monitoring
+10.
+
+“Provide a timeline of project approvals vs invested dates for each industry.”
+
+11.
+
+“Show average time taken between:
+Approval → Signing → Investment for each region.”
+
+12.
+
+“List projects where Projected Board Date is overdue compared to As of Date.”
+
+D. Document & Project-Level Queries
+13.
+
+“Search for projects mentioning ‘renewable’, ‘solar’, or ‘wind’ in the Project Description.”
+
+14.
+
+“List all Summary of Proposed Investment documents disclosed after 2020.”
+
+15.
+
+“Which projects have an Environmental Category = A but are still Pending?”
+
+16.
+
+“Find all projects with Document Type = Environmental & Social Review Summary.”
+
+E. Department & Product Line Insights
+17.
+
+“Show committed investment by Department for the last 5 years.”
+
+18.
+
+“Compare Project Line categories: Loan vs Guarantee vs Equity across regions.”
+
+19.
+
+“Which industries receive the largest risk management investments?”
+
+20.
+
+“Show the number of projects handled by each Department yearly.”
+
+F. Status & Risk-Based Queries
+21.
+
+“Find all Dropped projects with more than $10M originally approved investment.”
+
+22.
+
+“List all Active projects that have not reached their Invested Date even after 2 years of approval.”
+
+23.
+
+“What percentage of projects were Closed vs Active vs Pending in each region?”
+
+G. Text & Semantic Search Queries
+24.
+
+“Retrieve all projects that mention climate, infrastructure, or digital.”
+
+25.
+
+“Give me a summary of projects whose descriptions mention ‘SME financing’.”
+
+26.
+
+“Which industries reference ESG or environmental impact in the project narrative?”
+
+H. Complex Multi-Metric Analysis
+27.
+
+“Show a bubble chart:
+x = Loan Investment, y = Equity Investment, size = Total IFC Investment.”
+
+28.
+
+“Which countries have the largest gap between:
+Approved vs Invested investment amounts?”
+
+29.
+
+“List multi-product-line projects (Loan + Equity + Guarantee) and their totals.”
+
+30.
+
+“Provide a heatmap of region vs industry based on total approved investment.”

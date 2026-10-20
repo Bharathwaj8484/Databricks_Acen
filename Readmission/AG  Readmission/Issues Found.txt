@@ -1,0 +1,24 @@
+1. The below are issues Found.
+
+Critical Issues
+CRITICAL SEVERITY - Target Leakage / Data Falsification: In the data preparation script, the impute_clinical_history function explicitly uses the target variable (readmitted == '<30') to alter feature data (number_emergency). By doing this, you are effectively telling the model the answer before it takes the test. The XGBoost model will assign massive weight to the number_emergency feature because you mathematically forced it to correlate perfectly with the target. Any accuracy or recall metrics generated from this are entirely void.
+HIGH SEVERITY - Inaccurate LACE Score Calculation: The script calculates a pseudo-LACE score using time_in_hospital as 'L', number_diagnoses as 'C', and the current encounter's number_emergency as 'E'. Clinically, 'C' requires the Charlson Comorbidity Index (which weighs specific diseases, not just a raw count), and 'E' requires visits in the previous 6 months. Calling this a strict "LACE Score" will immediately be flagged by any judge with a healthcare background.
+
+Critical Issues:
+Flaw 1: The "Target Leakage" Time Bomb (Critical Danger)
+In your current Data Preparation.ipynb, you have this code:
+if row['readmitted'] == '<30':
+    row['number_emergency'] = np.random.randint(2, 6)
+The Brutal Truth: If a technical judge looks closely at this, you will be disqualified or lose massive points. Modifying the input features (number_emergency) based on the target variable (readmitted) is called Target Leakage. In the real world, at the time of discharge, you do not know if the patient will be readmitted. If you train a model on data that was artificially inflated because they were readmitted, the model is learning a fake pattern. It hurts real-world Precision because it's learning from noise.
+
+The Fix: Remove this random imputation. You should boost the signal using legitimate clinical feature engineering instead.
+
+Some suggested fix (Only suggestion alone, not to be taken literal before analysing deeply)
+Fix 1: The Missing Goldmine (ICD-9 Diagnosis Grouping)
+You dropped diag_1, diag_2, and diag_3 because they had 700+ unique codes. That was the right move for raw codes, but you threw away the most important clinical context. A patient with a broken leg (low readmission risk) and a patient with congestive heart failure (high readmission risk) look identical if you only count their number_diagnoses.
+
+🧠 Fix 2: Clinical Interaction Features (The "Complexity Index")
+Machine learning models (even XGBoost) sometimes struggle to multiply two distinct columns together to find a hidden meaning. We need to spoon-feed it clinical realities.
+
+⚖️ Fix 3: Advanced Balancing (SMOTE instead of Weights)
+Currently, you are using scale_pos_weight=11.94. This tells the model: "If you guess class 0 (Healthy) and you are wrong, I will punish you 11 times 

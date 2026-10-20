@@ -1,0 +1,23 @@
+This dataset presents a comprehensive collection of 200,000 marketing campaign records from various companies across different industries and geographical locations. Each entry represents a single campaign and includes key attributes such as:
+
+Campaign_ID – Unique identifier for each campaign
+
+Company – The business entity that launched the campaign
+
+Campaign_Type – Type of campaign (e.g., Email, Influencer, Display, etc.)
+
+Target_Audience – Demographic segment targeted (e.g., Men 18–24, Women 35–44)
+
+Duration – Length of the campaign in days
+
+Channel_Used – Platform used to execute the campaign (e.g., Google Ads, YouTube, Email)
+
+Conversion_Rate – Proportion of audience converted through the campaign
+
+Acquisition_Cost – Cost incurred to acquire a customer
+
+ROI – Return on investment as a performance metric
+
+Location – City where the campaign was run
+
+The dataset is ideal for a variety of data-driven tasks including marketing analytics, customer targeting, channel performance comparison, predictive modeling, and campaign optimization. Its balanced distribution across numerical and categorical features makes it suitable for both supervised and unsupervised learning approaches.

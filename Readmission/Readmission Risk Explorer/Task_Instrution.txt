@@ -1,0 +1,72 @@
+ROLE: Senior Databricks Engineer + Full Stack Developer
+
+CODE FILE: Qwen 2.0.py
+datasets: diabetic_data.csv and IDS_mapping.csv
+
+TASK: Fix my Gradio + Ngrok integration for Databricks Serverless environment. 
+Currently NOT working — need a working solution to expose my ML model UI publicly.
+
+CURRENT PROBLEM:
+1. Gradio 6.0+ removed share=True functionality (restricted in new versions)
+2. I tried Ngrok with valid auth token, but still no public URL is generated
+3. The Gradio server starts but Ngrok tunnel fails to connect properly in Databricks
+4. I need judges/evaluators to access my demo from outside my Databricks workspace
+
+MY ENVIRONMENT:
+- Platform: Databricks (no admin access, restricted networking)
+- Python: 3.12
+- Gradio: 6.0+
+- Ngrok: pyngrok 6.0.0
+- ML Model:  Logistic Regression (already trained, predictions saved to CSV)
+- Data: Patient readmission predictions stored in results_df DataFrame
+
+WHAT I HAVE TRIED (NOT WORKING):
+1. demo.launch(share=True) — Blocked in Gradio 6.0+
+2. Ngrok with auth token — Tunnel creates but URL doesn't resolve
+3. Localhost binding — Only works within my cluster, not externally
+
+WHAT I WANT (PRIORITY ORDER):
+
+OPTION 1 — FIX NGROK (Preferred):
+- Provide working Ngrok + Gradio code that actually generates a public URL in Databricks
+- Include proper port binding, tunnel setup, and auth token configuration
+- Add error handling and verification steps to confirm tunnel is active
+- Must work within Databricks Serverless networking constraints
+
+OPTION 2 — ALTERNATIVE TUNNELING:
+- If Ngrok cannot work in Databricks, suggest working alternative (Cloudflare Tunnel, LocalTunnel, etc.)
+- Must be free tier, no credit card required
+- Must generate a shareable public URL
+- Simple But impressive hackathon win demo
+
+CRITICAL REQUIREMENTS:
+1. Code must be copy-paste runnable in Databricks notebook
+2. All imports must be included at top
+3. No placeholder text like "YOUR_TOKEN_HERE" — show exact structure if possible
+4. Add verification print statements to confirm each step works
+5. Include troubleshooting section if something fails
+
+CONSTRAINTS TO ACKNOWLEDGE:
+- Databricks  has restricted outbound networking
+- Don't mess up the ML Model 
+- Some ports may be blocked by firewall
+- No admin/root access to install system-level tools
+
+DELIVERABLES (In Order):
+1. Diagnose why Ngrok is failing (list 3-5 likely causes specific to Databricks)
+2. Provide FIXED Ngrok + Gradio code with proper configuration
+4. Include a "How to Test" section with step-by-step verification
+5. Add troubleshooting checklist for common failure scenarios
+
+CODE STYLE:
+- Minimal comments (only for complex logic)
+- Production-ready error handling (try/except blocks)
+- Print statements for debugging visibility
+- No external dependencies beyond what's already installed
+
+START BY:
+1. Confirm you understand the Databricks + Gradio + Ngrok constraint
+2. List the top reasons why Ngrok might be failing in my setup
+3. Then provide the fixed code
+
+Wait for my confirmation before generating full code.
